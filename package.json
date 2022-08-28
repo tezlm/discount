@@ -1,0 +1,21 @@
+{
+  "name": "discount",
+  "version": "0.1.0",
+  "description": "another matrix library",
+  "author": "tezlm",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm build -rf",
+    "test": "tsc && node ./build/test/index.js"
+  },
+  "keywords": [
+    "matrix"
+  ],
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^18.7.13",
+    "typescript": "^4.8.2"
+  }
+}
