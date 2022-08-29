@@ -1,6 +1,6 @@
-import Client from "./client";
-import Room from "./room";
-import { Event, StateEvent } from "./event";
+import Client from "./client.js";
+import Room from "./room.js";
+import { Event, StateEvent } from "./event.js";
 
 export {
   Client,

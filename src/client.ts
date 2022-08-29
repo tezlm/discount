@@ -1,17 +1,16 @@
 import Emitter from "./emitter.js";
 import Fetcher from "./fetcher.js";
+import type * as api from "./api.js"
+
+import Room from "./room.js";
+import { Event, StateEvent } from "./event.js";
 
 export interface ClientConfig {
   token: string,
   baseUrl: string,
 }
 
-export enum ClientStatus {
-  Stopped = "stopped",
-  Starting = "starting",
-  Syncing = "syncing",
-  Reconnecting = "reconnecting",
-}
+export type ClientStatus = "stopped" | "starting" | "syncing" | "reconnecting";
 
 interface ClientEvents {
   on(event: "status", listener: () => any): this,
@@ -19,8 +18,8 @@ interface ClientEvents {
   on(event: "error", listener: (error: Error) => any): this,
   
   // events
-  // on(event: "event", listener: (Event) => any): this,
-  // on(event: "state", listener: () => any): this,
+  on(event: "event", listener: (event: Event) => any): this,
+  on(event: "state", listener: (state: StateEvent) => any): this,
   // on(event: "ephermeral", listener: () => any): this,
   
   // room members
@@ -31,8 +30,9 @@ interface ClientEvents {
 }
 
 export default class Client extends Emitter implements ClientEvents {
-  public status = ClientStatus.Stopped;
+  public status: ClientStatus = "stopped";
   public fetcher: Fetcher;
+  public rooms = new Map<string, Room>();
   
   constructor(config: ClientConfig) {
     super();
@@ -44,22 +44,73 @@ export default class Client extends Emitter implements ClientEvents {
     this.status = status;
   }
   
-  private async sync(since?: string) {
-    const sync = await this.fetcher.fetchClient("/sync", { query: since ? { since } : undefined });
-    if (sync.error) { throw "error" }
+  private handleError(error: any, since? : string) {
+    console.log(error);
+    if (error.errcode) return;
+    this.retry(1000, since);
+  }
+  
+  private retry(timeout: number, since?: string) {
+    setTimeout(async () => {
+      const sync = await this.fetcher.sync(since)
+        .catch(() => this.retry(timeout * 2, since));
+      if (!sync) return;
+      this.handleSync(sync);
+    }, timeout);
+  }
     
-    if (this.status === ClientStatus.Starting) {
-      this.setStatus(ClientStatus.Syncing);
-      this.emit("ready");
-    } else if (this.status === ClientStatus.Reconnecting) {
-      this.setStatus(ClientStatus.Syncing);
+  private async sync(since?: string) {
+    const sync = await this.fetcher.sync(since)
+      .catch((err) => this.handleError(err, since));
+    if (!sync) return;
+    this.handleSync(sync);
+  }
+  
+  private handleSync(sync: api.Sync) {
+    if (sync.rooms) {
+      const r = sync.rooms;
+      for (let id in r.join ?? {}) {
+        if (r.join[id].state) {
+          if (this.rooms.has(id)) {
+            const room = this.rooms.get(id);
+            for (let raw of r.join[id].state.events) {
+              const state = new StateEvent(this, room!, raw);
+              room!.handleState(state);
+              this.emit("state", state);
+            }
+          } else {
+            const room = new Room(this, id);
+            for (let raw of r.join[id].state.events) {
+              room.handleState(new StateEvent(this, room, raw), false);
+            }
+            this.rooms.set(id, room);
+          }
+        }
+        
+        if (r.join[id].timeline && this.status !== "starting") {
+          const room = this.rooms.get(id);
+          if (!room) throw "how did we get here?";
+          for (let raw of r.join[id].timeline.events) {
+            const event = new Event(this, room!, raw);
+            this.emit("event", event);
+          }
+        }
+      }
     }
     
-    this.sync(sync.since);
+    if (this.status === "starting") {
+      this.setStatus("syncing");
+      this.emit("ready");
+    } else if (this.status === "reconnecting") {
+      this.setStatus("syncing");
+    }
+    
+    this.sync(sync.next_batch);
   }
   
   async start() {
-    this.setStatus(ClientStatus.Starting);
+    this.setStatus("starting");
     this.sync();
+    // this.fetcher.filter.post();
   }
 }

@@ -2,10 +2,11 @@ import type Client from "./client";
 import type { StateEvent } from "./event";
 
 export default class Room {
+  private state: Array<StateEvent> = [];
+  
   constructor(
     public client: Client,
     public id: string,
-    private state: Array<StateEvent>,
   ) {}
   
   getState(type: string, key = ""): StateEvent | undefined {
