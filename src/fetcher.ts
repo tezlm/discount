@@ -78,8 +78,7 @@ export default class Fetcher {
   }
   
   // events
-  async sendEvent(roomId: string, type: string, content: any, transaction?: string): Promise<string> {
-    if (!transaction) transaction = Math.random().toString(36);
+  async sendEvent(roomId: string, type: string, content: any, transaction: string): Promise<string> {
     return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${transaction}`, { method: "PUT", body: content });
   }
   
@@ -87,8 +86,7 @@ export default class Fetcher {
     return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${stateKey}`, { method: "PUT", body: content });
   }
   
-  async redact(roomId: string, eventId: string, transaction?: string): Promise<string> {
-    if (!transaction) transaction = Math.random().toString(36);
-    return await this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}/${transaction}`, { method: "PUT" });
+  async redact(roomId: string, eventId: string, transaction: string, reason?: string): Promise<string> {
+    return await this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}/${transaction}`, { method: "PUT", body: reason ? { reason } : undefined });
   }
 }

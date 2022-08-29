@@ -33,6 +33,7 @@ export default class Client extends Emitter implements ClientEvents {
   public status: ClientStatus = "stopped";
   public fetcher: Fetcher;
   public rooms = new Map<string, Room>();
+  private transactions = new Map<string, Function>();
   
   constructor(config: ClientConfig) {
     super();
@@ -93,7 +94,16 @@ export default class Client extends Emitter implements ClientEvents {
           if (!room) throw "how did we get here?";
           for (let raw of data.timeline.events) {
             const event = new Event(this, room!, raw);
-            this.emit("event", event);
+            if (raw.type === "m.room.redaction") {              
+              this.emit("redact", event);
+            } else {
+              this.emit("event", event);
+            }
+            if (raw.unsigned?.transaction_id) {
+              const txn = raw.unsigned.transaction_id;
+              this.transactions.get(txn)?.(event);
+              this.transactions.delete(txn);
+            }
           }
         }
       }
@@ -107,6 +117,12 @@ export default class Client extends Emitter implements ClientEvents {
     }
     
     this.sync(sync.next_batch);
+  }
+  
+  public async transaction(id: string): Promise<Event | StateEvent> {
+    return new Promise((res) => {
+      this.transactions.set(id, res);
+    });
   }
   
   async start() {
