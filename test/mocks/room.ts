@@ -5,4 +5,4 @@ const client = new Client({
   baseUrl: "no",
 });
 
-export default new Room(client, "idk", []);
+export default new Room(client, "idk");

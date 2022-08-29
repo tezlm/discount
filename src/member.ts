@@ -3,13 +3,7 @@ import type Room from "./room";
 import type { StateEvent } from "./event";
 import User from "./user";
 
-export enum Membership {
-  Join = "join",
-  Knock = "knock",
-  Invite = "invite",
-  Leave = "leave",
-  Ban = "ban",
-}
+export type Membership = "join" | "knock" | "invite" | "leave" | "ban";
 
 export default class Member {
   public client;
@@ -28,13 +22,7 @@ export default class Member {
   }
   
   get membership(): Membership {
-    switch(this.event.content.membership) {
-      case "join": return Membership.Join;
-      case "knock": return Membership.Knock;
-      case "invite": return Membership.Invite;
-      case "ban": return Membership.Ban;
-      default: return Membership.Leave;
-    }
+    return this.event.content.membership ?? "leave";
   }
   
   // ban(reason: string) {}
