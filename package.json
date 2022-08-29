@@ -4,7 +4,7 @@
   "description": "another matrix library",
   "author": "tezlm",
   "type": "module",
-  "main": "index.js",
+  "main": "build/src/index.js",
   "scripts": {
     "build": "tsc",
     "clean": "rm build -rf",
