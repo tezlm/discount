@@ -42,7 +42,7 @@ export default class Fetcher {
     }
     
   	if (true) {
-  		const color = ({ GET: '4', POST: '5' })[fetchOpts.method as string] ?? '3';
+  		const color = ({ GET: '4', POST: '2', DELETE: '1', PUT: '3' })[fetchOpts.method as string] ?? '5';
   		console.log(`\x1b[3${color}m${fetchOpts.method}\x1b[0m ${this.baseUrl}/_matrix${path}${query}`);
   	}
     
@@ -66,16 +66,29 @@ export default class Fetcher {
     return this.fetch(`/media/v3${path}`, options);
   }
   
+  // syncing
   async sync(since?: string): Promise<api.Sync> {
     const query = { since, filter: this.filter, timeout: "30000" };
     return this.fetchClient("/sync", { query });
   }
   
-  async postFilter(userId: string, filter: api.Filter): Promise<{filter_id: string}> {
-    return this.fetchClient(`/user/${encode(userId)}/filter`, { method: "POST", body: filter });
+  async postFilter(userId: string, filter: Partial<api.Filter>): Promise<string> {
+    const { filter_id } = await this.fetchClient(`/user/${encode(userId)}/filter`, { method: "POST", body: filter });
+    return filter_id;
   }
   
-  async getFilter(userId: string, filterId: string): Promise<api.Filter> {
-    return this.fetchClient(`/user/${encode(userId)}/filter/${encode(filterId)}`, {});
+  // events
+  async sendEvent(roomId: string, type: string, content: any, transaction?: string): Promise<string> {
+    if (!transaction) transaction = Math.random().toString(36);
+    return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${transaction}`, { method: "PUT", body: content });
+  }
+  
+  async sendState(roomId: string, type: string, content: any, stateKey: string = ""): Promise<string> {
+    return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${stateKey}`, { method: "PUT", body: content });
+  }
+  
+  async redact(roomId: string, eventId: string, transaction?: string): Promise<string> {
+    if (!transaction) transaction = Math.random().toString(36);
+    return await this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}/${transaction}`, { method: "PUT" });
   }
 }

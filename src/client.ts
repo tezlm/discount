@@ -70,27 +70,28 @@ export default class Client extends Emitter implements ClientEvents {
     if (sync.rooms) {
       const r = sync.rooms;
       for (let id in r.join ?? {}) {
-        if (r.join[id].state) {
+        const data = r.join![id];
+        if (data.state) {
           if (this.rooms.has(id)) {
             const room = this.rooms.get(id);
-            for (let raw of r.join[id].state.events) {
+            for (let raw of data.state.events) {
               const state = new StateEvent(this, room!, raw);
               room!.handleState(state);
               this.emit("state", state);
             }
           } else {
             const room = new Room(this, id);
-            for (let raw of r.join[id].state.events) {
+            for (let raw of data.state.events) {
               room.handleState(new StateEvent(this, room, raw), false);
             }
             this.rooms.set(id, room);
           }
         }
         
-        if (r.join[id].timeline && this.status !== "starting") {
+        if (data.timeline && this.status !== "starting") {
           const room = this.rooms.get(id);
           if (!room) throw "how did we get here?";
-          for (let raw of r.join[id].timeline.events) {
+          for (let raw of data.timeline.events) {
             const event = new Event(this, room!, raw);
             this.emit("event", event);
           }
@@ -110,7 +111,10 @@ export default class Client extends Emitter implements ClientEvents {
   
   async start() {
     this.setStatus("starting");
+    const filterId = await this.fetcher.postFilter("@bot:celery.eu.org", {
+      room: { state: { lazy_load_members: true } },
+    });
+    this.fetcher.filter = filterId;
     this.sync();
-    // this.fetcher.filter.post();
   }
 }
