@@ -50,8 +50,14 @@ export class Event<RawType extends RawEvent = RawEvent> {
     return !!this.raw.state_key;
   }
   
-  // redact(reason: string) {}
+  async redact(reason?: string) {
+    const txn = Math.random().toString(36);
+    this.client.fetcher.redact(this.room.id, this.id, txn, reason);
+    return await this.client.transaction(txn);
+  }
+  
   // edit(content: any) {}
+  // reply(type: string, content: any) {}
 }
 
 export class StateEvent extends Event<RawStateEvent> {  

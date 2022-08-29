@@ -37,9 +37,14 @@ export default class Room {
   // join() {}
   // invite(who: User | string) {}
   // members: Cache<Member>
-  // async sendEvent(type: string, content: any) {}
-  // async sendState(type: string, content: any, stateKey = "") {}
-  // async setName(name)
-  // async setTopic(name)
-  // async setAvatar(avatar)
+  
+  async sendEvent(type: string, content: any) {
+    const txn = Math.random().toString(36);
+    this.client.fetcher.sendEvent(this.id, type, content, txn);
+    return await this.client.transaction(txn);
+  }
+  
+  async sendState(type: string, content: any, stateKey = "") {
+    await this.client.fetcher.sendState(this.id, type, content, stateKey);
+  }
 }
