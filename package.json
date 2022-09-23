@@ -8,14 +8,14 @@
   "scripts": {
     "build": "tsc",
     "clean": "rm build -rf",
-    "test": "tsc && node ./build/test/index.js"
+    "test": "echo tests are disabled for now && exit 1 && tsc && node ./build/test/index.js"
   },
   "keywords": [
     "matrix"
   ],
   "license": "ISC",
   "devDependencies": {
-    "@types/node": "^18.7.13",
-    "typescript": "^4.8.2"
+    "@types/node": "^18.7.18",
+    "typescript": "^4.8.3"
   }
 }

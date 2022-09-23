@@ -27,6 +27,10 @@ interface ClientEvents {
   // on(event: "invite", listener: (member: Member) => any): this,
   // on(event: "leave", listener: (member: Member) => any): this,
   // on(event: "member", listener: (member: Member) => any): this,
+  
+  // misc
+  on(event: "accountData", listener: (events: [api.AccountData], room: Room | null) => any): this,
+  on(event: "notifications", listener: (events: { unread: number, highlight: number }, room: Room) => any): this,
 }
 
 export default class Client extends Emitter implements ClientEvents {
@@ -47,7 +51,7 @@ export default class Client extends Emitter implements ClientEvents {
   
   private handleError(error: any, since? : string) {
     console.log(error);
-    if (error.errcode) return;
+    if (error.errcode) throw new Error(error);
     this.retry(1000, since);
   }
   
@@ -68,6 +72,10 @@ export default class Client extends Emitter implements ClientEvents {
   }
   
   private handleSync(sync: api.Sync) {
+    if (sync.account_data) {
+        for (let event of sync.account_data.events) this.emit("accountData", event);
+    }
+    
     if (sync.rooms) {
       const r = sync.rooms;
       for (let id in r.join ?? {}) {
@@ -86,18 +94,25 @@ export default class Client extends Emitter implements ClientEvents {
               room.handleState(new StateEvent(this, room, raw), false);
             }
             this.rooms.set(id, room);
+            // this.emit("join", room);
+            this.emit("join", room.id, (room as any).state, data.timeline?.prev_batch);
           }
         }
+
+        const room = this.rooms.get(id);
+        if (!room) return;
         
         if (data.timeline && this.status !== "starting") {
-          const room = this.rooms.get(id);
           if (!room) throw "how did we get here?";
           for (let raw of data.timeline.events) {
             const event = new Event(this, room!, raw);
             if (raw.type === "m.room.redaction") {              
-              this.emit("redact", event);
+              // this.emit("redact", event);
+              // this.emit("event", event);
+              this.emit("event", raw);
             } else {
-              this.emit("event", event);
+              // this.emit("event", event);
+              this.emit("event", raw);
             }
             if (raw.unsigned?.transaction_id) {
               const txn = raw.unsigned.transaction_id;
@@ -106,9 +121,23 @@ export default class Client extends Emitter implements ClientEvents {
             }
           }
         }
+        
+        for (let event of data.account_data?.events ?? []) this.emit("roomAccountData", room.id, event);
+        for (let event of data.ephemeral?.events ?? []) this.emit("ephemeral", event, room);
+        if (data.unread_notifications) {
+          const notifs = data.unread_notifications;
+          this.emit("notifications", room, { unread: notifs.notification_count, highlight: notifs.highlight_count });
+        }
+      }
+     
+     for (let id in r.leave ?? {}) {
+        if (this.rooms.has(id)) {
+          this.emit("leave", this.rooms.get(id));
+          this.rooms.delete(id);
+        }
       }
     }
-    
+        
     if (this.status === "starting") {
       this.setStatus("syncing");
       this.emit("ready");

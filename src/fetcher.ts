@@ -41,10 +41,10 @@ export default class Fetcher {
       }
     }
     
-  	if (true) {
-  		const color = ({ GET: '4', POST: '2', DELETE: '1', PUT: '3' })[fetchOpts.method as string] ?? '5';
-  		console.log(`\x1b[3${color}m${fetchOpts.method}\x1b[0m ${this.baseUrl}/_matrix${path}${query}`);
-  	}
+  	// if (true) {
+  		// const color = ({ GET: '4', POST: '2', DELETE: '1', PUT: '3' })[fetchOpts.method as string] ?? '5';
+  		// console.log(`\x1b[3${color}m${fetchOpts.method}\x1b[0m ${this.baseUrl}/_matrix${path}${query}`);
+  	// }
     
     return fetch(`${this.baseUrl}/_matrix${path}${query}`, fetchOpts)
       .then(res => res.json());
@@ -68,7 +68,7 @@ export default class Fetcher {
   
   // syncing
   async sync(since?: string): Promise<api.Sync> {
-    const query = { since, filter: this.filter, timeout: "30000" };
+    const query = { since, filter: this.filter, timeout: "60000" };
     return this.fetchClient("/sync", { query });
   }
   

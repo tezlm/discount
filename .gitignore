@@ -1,3 +1,3 @@
 node_modules
-build
+# build # temporarially disabled until discard gets ts support
 .env

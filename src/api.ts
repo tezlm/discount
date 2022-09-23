@@ -1,4 +1,3 @@
-
 import type { RawEvent, RawStateEvent } from "./event.js";
 
 export interface Error {
@@ -13,7 +12,7 @@ interface StrippedState {
   type: string,
 }
 
-interface AccountData {
+export interface AccountData {
   type: string,
   content: any,
 }
@@ -25,7 +24,7 @@ interface Timeline {
 }
 
 export interface Sync {
-  account_data?: [AccountData],
+  account_data?: { events: [AccountData] },
   device_lists?: { changed: [string], left: [string] },
   device_one_time_keys_count?: { [algorithm: string]: number },
   device_unused_fallback_key_types?: [string],
@@ -37,8 +36,8 @@ export interface Sync {
     },
     join?: {
       [id: string]: {
-        account_data?: [AccountData],
-        ephemeral?: [RawEvent],
+        account_data?: { events: [AccountData] },
+        ephemeral?: { events: [RawEvent] },
         state?: { events: [RawStateEvent] },
         summary?: { "m.heroes": [string], "m.invited_member_count": number, "m.joined_member_count": number },
         timeline?: Timeline,

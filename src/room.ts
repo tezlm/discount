@@ -21,6 +21,10 @@ export default class Room {
     this.state.push(event);
   }
   
+  get type(): string {
+    return this.getState("m.room.create")?.content.type;
+  }
+    
   get name(): string {
     return this.getState("m.room.name")?.content.name;
   }
