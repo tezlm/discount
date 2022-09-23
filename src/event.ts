@@ -58,6 +58,10 @@ export class Event<RawType extends RawEvent = RawEvent> {
   
   // edit(content: any) {}
   // reply(type: string, content: any) {}
+  
+  get stateKey(): string | undefined {
+    return this.raw.state_key;
+  }
 }
 
 export class StateEvent extends Event<RawStateEvent> {  
