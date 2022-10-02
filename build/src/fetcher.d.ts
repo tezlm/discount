@@ -23,7 +23,9 @@ export default class Fetcher {
     fetchMembers(roomId: string): Promise<{
         chunk: Array<api.RawStateEvent>;
     }>;
-    sendEvent(roomId: string, type: string, content: any, transaction: string): Promise<object>;
+    sendEvent(roomId: string, type: string, content: any, transaction: string): Promise<{
+        event_id: string;
+    }>;
     sendState(roomId: string, type: string, content: any, stateKey?: string): Promise<object>;
     redact(roomId: string, eventId: string, transaction: string, reason?: string): Promise<object>;
 }

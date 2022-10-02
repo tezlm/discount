@@ -1,20 +1,22 @@
-import User from "./user";
+// export default class Member extends User {
 export default class Member {
     client;
     room;
     event;
+    id;
+    name;
+    avatar;
     constructor(client, room, event) {
-        if (!event.stateKey)
-            throw "event must have stateKey";
         this.client = client;
         this.room = room;
         this.event = event;
-    }
-    get user() {
-        return new User(this.client, this.event.stateKey, this.event.content);
-    }
-    get id() {
-        return this.event.stateKey;
+        if (!event.stateKey)
+            throw "event must have stateKey";
+        this.room = room;
+        this.event = event;
+        this.id = event.stateKey;
+        this.name = event.content.displayname;
+        this.avatar = event.content.avatar_url;
     }
     get membership() {
         return this.event.content.membership ?? "leave";
@@ -23,4 +25,9 @@ export default class Member {
         // TODO: power should always be defined in room
         return this.room.power?.getUser(this.id) ?? 0;
     }
+    // ban(reason: string) {}
+    // kick(reason: string) {}
+    // unban(reason: string) {}
+    // TEMP: discard parity
+    get userId() { return this.id; }
 }

@@ -3,14 +3,15 @@ import type Client from "./client";
 interface UserData {
   name: string,
   avatar: string,
+  [key: string]: any,
 }
 
 export default class User {
-  public client;
-  public id;
-  private data;
-  
-  constructor(client: Client, id: string, data: UserData) {
+  constructor(
+    public client: Client,
+    public id: string,
+    private data: UserData
+  ) {
     this.client = client;
     this.id = id;
     this.data = data;

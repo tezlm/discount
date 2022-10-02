@@ -1,28 +1,27 @@
 import type Client from "./client";
 import type Room from "./room";
 import type { StateEvent } from "./event";
-import User from "./user";
+// import User from "./user";
 
 export type Membership = "join" | "knock" | "invite" | "leave" | "ban";
 
+// export default class Member extends User {
 export default class Member {
-  public client;
-  public room;
-  private event;
+  public id: string;
+  public name: string;
+  public avatar: string;
   
-  constructor(client: Client, room: Room, event: StateEvent) {
+  constructor(
+    public client: Client,
+    public room: Room,
+    public event: StateEvent
+  ) {
     if (!event.stateKey) throw "event must have stateKey";
-    this.client = client;
     this.room = room;
     this.event = event;
-  }
-  
-  get user(): User {
-    return new User(this.client, this.event.stateKey, this.event.content);
-  }
-  
-  get id(): string {
-    return this.event.stateKey;
+    this.id = event.stateKey;
+    this.name = event.content.displayname;
+    this.avatar = event.content.avatar_url;
   }
   
   get membership(): Membership {
@@ -37,4 +36,7 @@ export default class Member {
   // ban(reason: string) {}
   // kick(reason: string) {}
   // unban(reason: string) {}
+  
+  // TEMP: discard parity
+  get userId(): string { return this.id }
 }

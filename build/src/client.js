@@ -5,10 +5,13 @@ import { Event, StateEvent } from "./event.js";
 export default class Client extends Emitter {
     status = "stopped";
     fetcher;
+    userId;
     rooms = new Map();
+    accountData = new Map();
     transactions = new Map();
     constructor(config) {
         super();
+        this.userId = config.userId;
         this.fetcher = new Fetcher(config.token, config.baseUrl);
     }
     setStatus(status) {
@@ -39,8 +42,10 @@ export default class Client extends Emitter {
     }
     handleSync(sync) {
         if (sync.account_data) {
-            for (let event of sync.account_data.events)
+            for (let event of sync.account_data.events) {
+                this.accountData.set(event.type, event.content);
                 this.emit("accountData", event);
+            }
         }
         if (sync.rooms) {
             const r = sync.rooms;
@@ -62,7 +67,7 @@ export default class Client extends Emitter {
                         }
                         this.rooms.set(id, room);
                         // this.emit("join", room);
-                        this.emit("join", room.id, room.state, data.timeline?.prev_batch);
+                        this.emit("join", room, data.timeline?.prev_batch);
                     }
                 }
                 const room = this.rooms.get(id);
@@ -90,13 +95,17 @@ export default class Client extends Emitter {
                         }
                     }
                 }
-                for (let event of data.account_data?.events ?? [])
-                    this.emit("roomAccountData", room.id, event);
+                for (let event of data.account_data?.events ?? []) {
+                    room.accountData.set(event.type, event.content);
+                    this.emit("roomAccountData", room, event);
+                }
                 for (let event of data.ephemeral?.events ?? [])
                     this.emit("ephemeral", event, room);
                 if (data.unread_notifications) {
-                    const notifs = data.unread_notifications;
-                    this.emit("notifications", room, { unread: notifs.notification_count, highlight: notifs.highlight_count });
+                    const apiNotifs = data.unread_notifications;
+                    const notifs = { unread: apiNotifs.notification_count, highlight: apiNotifs.highlight_count };
+                    room.notifications = notifs;
+                    this.emit("notifications", room, notifs);
                 }
             }
             for (let id in r.leave ?? {}) {
@@ -123,7 +132,10 @@ export default class Client extends Emitter {
     async start() {
         this.setStatus("starting");
         const filterId = await this.fetcher.postFilter("@bot:celery.eu.org", {
-            room: { state: { lazy_load_members: true } },
+            room: {
+                state: { lazy_load_members: true },
+                timeline: { limit: 0 },
+            },
         });
         this.fetcher.filter = filterId;
         this.sync();

@@ -2,6 +2,7 @@ import type Client from "./client";
 interface UserData {
     name: string;
     avatar: string;
+    [key: string]: any;
 }
 export default class User {
     client: Client;

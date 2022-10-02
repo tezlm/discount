@@ -6,6 +6,9 @@ export default class User {
         this.client = client;
         this.id = id;
         this.data = data;
+        this.client = client;
+        this.id = id;
+        this.data = data;
     }
     get name() {
         return this.data.name;
