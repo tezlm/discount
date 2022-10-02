@@ -16,6 +16,9 @@ export interface RawStateEvent extends RawEvent {
 }
 
 export class Event<RawType extends RawEvent = RawEvent> {  
+  public relations: Array<Event> = [];
+  // private cacheContent: any = {};
+  
   constructor(
     public client: Client,
     public room: Room,
@@ -23,6 +26,10 @@ export class Event<RawType extends RawEvent = RawEvent> {
   ) {}
   
   get id(): string {
+    return this.raw.event_id;
+  }
+  
+  get eventId(): string {
     return this.raw.event_id;
   }
   

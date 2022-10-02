@@ -59,14 +59,30 @@ export default class Fetcher {
         const { filter_id } = await this.fetchClient(`/user/${encode(userId)}/filter`, { method: "POST", body: filter });
         return filter_id;
     }
+    // content
+    // fetchMessages(roomId, startId, direction) {
+    //   return this.fetch("GET", `/rooms/${encode(roomId)}/messages?from=${encode(startId)}&dir=${direction}&limit=200`);
+    // }
+    // fetchContext(roomId, eventId) {
+    //   return this.fetch("GET", `/rooms/${encode(roomId)}/context/${encode(eventId)}?limit=200`);
+    // }
+    // fetchEvent(roomId, eventId) {
+    //   return this.fetch("GET", `/rooms/${encode(roomId)}/event/${encode(eventId)}`);
+    // }
+    async fetchMembers(roomId) {
+        return JSON.parse(await this.fetchClient(`/rooms/${encode(roomId)}/members`, {}));
+    }
+    // fetchUser(userId) {
+    //   return this.fetch("GET", `/profile/${encode(userId)}`);
+    // }  
     // events
     async sendEvent(roomId, type, content, transaction) {
-        return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${transaction}`, { method: "PUT", body: content });
+        return JSON.parse(await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${transaction}`, { method: "PUT", body: content }));
     }
     async sendState(roomId, type, content, stateKey = "") {
-        return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${stateKey}`, { method: "PUT", body: content });
+        return JSON.parse(await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${stateKey}`, { method: "PUT", body: content }));
     }
     async redact(roomId, eventId, transaction, reason) {
-        return await this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}/${transaction}`, { method: "PUT", body: reason ? { reason } : undefined });
+        return JSON.parse(await this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}/${transaction}`, { method: "PUT", body: reason ? { reason } : undefined }));
     }
 }

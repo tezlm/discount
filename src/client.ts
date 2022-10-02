@@ -102,17 +102,18 @@ export default class Client extends Emitter implements ClientEvents {
         const room = this.rooms.get(id);
         if (!room) return;
         
-        if (data.timeline && this.status !== "starting") {
+        // if (data.timeline && this.status !== "starting") {
+        if (data.timeline) {
           if (!room) throw "how did we get here?";
           for (let raw of data.timeline.events) {
             const event = new Event(this, room!, raw);
             if (raw.type === "m.room.redaction") {              
               // this.emit("redact", event);
               // this.emit("event", event);
-              this.emit("event", raw);
+              this.emit("event", id, raw);
             } else {
               // this.emit("event", event);
-              this.emit("event", raw);
+              this.emit("event", id, raw);
             }
             if (raw.unsigned?.transaction_id) {
               const txn = raw.unsigned.transaction_id;

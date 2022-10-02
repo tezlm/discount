@@ -1,4 +1,5 @@
 import type { RawEvent, RawStateEvent } from "./event.js";
+export type { RawEvent, RawStateEvent } from "./event.js";
 export interface Error {
     errcode: string;
     error: string;
@@ -116,4 +117,3 @@ export interface Filter {
     presence?: EventFilter;
     room?: RoomFilter;
 }
-export {};

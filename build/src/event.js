@@ -2,12 +2,17 @@ export class Event {
     client;
     room;
     raw;
+    relations = [];
+    // private cacheContent: any = {};
     constructor(client, room, raw) {
         this.client = client;
         this.room = room;
         this.raw = raw;
     }
     get id() {
+        return this.raw.event_id;
+    }
+    get eventId() {
         return this.raw.event_id;
     }
     get type() {

@@ -77,16 +77,37 @@ export default class Fetcher {
     return filter_id;
   }
   
+  // content
+  // fetchMessages(roomId, startId, direction) {
+  //   return this.fetch("GET", `/rooms/${encode(roomId)}/messages?from=${encode(startId)}&dir=${direction}&limit=200`);
+  // }
+
+  // fetchContext(roomId, eventId) {
+  //   return this.fetch("GET", `/rooms/${encode(roomId)}/context/${encode(eventId)}?limit=200`);
+  // }
+  
+  // fetchEvent(roomId, eventId) {
+  //   return this.fetch("GET", `/rooms/${encode(roomId)}/event/${encode(eventId)}`);
+  // }
+  
+  async fetchMembers(roomId: string): Promise<{ chunk: Array<api.RawStateEvent> }> {
+    return JSON.parse(await this.fetchClient(`/rooms/${encode(roomId)}/members`, {}));
+  }
+  
+  // fetchUser(userId) {
+  //   return this.fetch("GET", `/profile/${encode(userId)}`);
+  // }  
+  
   // events
-  async sendEvent(roomId: string, type: string, content: any, transaction: string): Promise<string> {
-    return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${transaction}`, { method: "PUT", body: content });
+  async sendEvent(roomId: string, type: string, content: any, transaction: string): Promise<object> {
+    return JSON.parse(await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${transaction}`, { method: "PUT", body: content }));
   }
   
-  async sendState(roomId: string, type: string, content: any, stateKey: string = ""): Promise<string> {
-    return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${stateKey}`, { method: "PUT", body: content });
+  async sendState(roomId: string, type: string, content: any, stateKey: string = ""): Promise<object> {
+    return JSON.parse(await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${stateKey}`, { method: "PUT", body: content }));
   }
   
-  async redact(roomId: string, eventId: string, transaction: string, reason?: string): Promise<string> {
-    return await this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}/${transaction}`, { method: "PUT", body: reason ? { reason } : undefined });
+  async redact(roomId: string, eventId: string, transaction: string, reason?: string): Promise<object> {
+    return JSON.parse(await this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}/${transaction}`, { method: "PUT", body: reason ? { reason } : undefined }));
   }
 }

@@ -16,8 +16,10 @@ export declare class Event<RawType extends RawEvent = RawEvent> {
     client: Client;
     room: Room;
     protected raw: RawType;
+    relations: Array<Event>;
     constructor(client: Client, room: Room, raw: RawType);
     get id(): string;
+    get eventId(): string;
     get type(): string;
     get sender(): string;
     get content(): any;
