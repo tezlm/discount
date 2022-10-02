@@ -6,6 +6,7 @@ import { Event, StateEvent } from "./event.js";
 export interface ClientConfig {
     token: string;
     baseUrl: string;
+    userId: string;
 }
 export declare type ClientStatus = "stopped" | "starting" | "syncing" | "reconnecting";
 interface ClientEvents {
@@ -14,7 +15,8 @@ interface ClientEvents {
     on(event: "error", listener: (error: Error) => any): this;
     on(event: "event", listener: (event: Event) => any): this;
     on(event: "state", listener: (state: StateEvent) => any): this;
-    on(event: "accountData", listener: (events: [api.AccountData], room: Room | null) => any): this;
+    on(event: "accountData", listener: (event: api.AccountData) => any): this;
+    on(event: "roomAccountData", listener: (event: api.AccountData, room: Room) => any): this;
     on(event: "notifications", listener: (events: {
         unread: number;
         highlight: number;
@@ -23,7 +25,9 @@ interface ClientEvents {
 export default class Client extends Emitter implements ClientEvents {
     status: ClientStatus;
     fetcher: Fetcher;
+    userId: string;
     rooms: Map<string, Room>;
+    accountData: Map<string, any>;
     private transactions;
     constructor(config: ClientConfig);
     private setStatus;

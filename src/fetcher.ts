@@ -91,7 +91,7 @@ export default class Fetcher {
   // }
   
   async fetchMembers(roomId: string): Promise<{ chunk: Array<api.RawStateEvent> }> {
-    return JSON.parse(await this.fetchClient(`/rooms/${encode(roomId)}/members`, {}));
+    return await this.fetchClient(`/rooms/${encode(roomId)}/members`, {});
   }
   
   // fetchUser(userId) {
@@ -99,15 +99,15 @@ export default class Fetcher {
   // }  
   
   // events
-  async sendEvent(roomId: string, type: string, content: any, transaction: string): Promise<object> {
-    return JSON.parse(await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${transaction}`, { method: "PUT", body: content }));
+  async sendEvent(roomId: string, type: string, content: any, transaction: string): Promise<{ event_id: string }> {
+    return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${transaction}`, { method: "PUT", body: content });
   }
   
   async sendState(roomId: string, type: string, content: any, stateKey: string = ""): Promise<object> {
-    return JSON.parse(await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${stateKey}`, { method: "PUT", body: content }));
+    return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${stateKey}`, { method: "PUT", body: content });
   }
   
   async redact(roomId: string, eventId: string, transaction: string, reason?: string): Promise<object> {
-    return JSON.parse(await this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}/${transaction}`, { method: "PUT", body: reason ? { reason } : undefined }));
+    return await this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}/${transaction}`, { method: "PUT", body: reason ? { reason } : undefined });
   }
 }

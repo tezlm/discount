@@ -36,7 +36,7 @@ export default class Members extends Map {
         const cmp = (a, b) => a > b ? 1 : a < b ? -1 : 0;
         const members = [...this.values()]
             .filter(i => i.membership === membership)
-            .sort((a, b) => cmp(b.power, a.power) || cmp(a.user.name, b.user.name));
+            .sort((a, b) => cmp(b.power, a.power) || cmp(a.name, b.name));
         this.sortCache.set(membership, members);
         return members;
     }

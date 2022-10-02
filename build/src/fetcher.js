@@ -70,19 +70,19 @@ export default class Fetcher {
     //   return this.fetch("GET", `/rooms/${encode(roomId)}/event/${encode(eventId)}`);
     // }
     async fetchMembers(roomId) {
-        return JSON.parse(await this.fetchClient(`/rooms/${encode(roomId)}/members`, {}));
+        return await this.fetchClient(`/rooms/${encode(roomId)}/members`, {});
     }
     // fetchUser(userId) {
     //   return this.fetch("GET", `/profile/${encode(userId)}`);
     // }  
     // events
     async sendEvent(roomId, type, content, transaction) {
-        return JSON.parse(await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${transaction}`, { method: "PUT", body: content }));
+        return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${transaction}`, { method: "PUT", body: content });
     }
     async sendState(roomId, type, content, stateKey = "") {
-        return JSON.parse(await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${stateKey}`, { method: "PUT", body: content }));
+        return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${stateKey}`, { method: "PUT", body: content });
     }
     async redact(roomId, eventId, transaction, reason) {
-        return JSON.parse(await this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}/${transaction}`, { method: "PUT", body: reason ? { reason } : undefined }));
+        return await this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}/${transaction}`, { method: "PUT", body: reason ? { reason } : undefined });
     }
 }

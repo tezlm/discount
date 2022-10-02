@@ -6,13 +6,18 @@ export default class Room {
     client: Client;
     id: string;
     private state;
+    private _cachePower;
     name: string | null;
     topic: string | null;
     avatar: string | null;
     type: string | null;
     joinRule: JoinRule;
     members: Members;
-    private _cachePower;
+    accountData: Map<String, any>;
+    notifications: {
+        unread: number;
+        highlight: number;
+    };
     constructor(client: Client, id: string);
     getState(type: string, key?: string): StateEvent | undefined;
     getAllState(type: string): Array<StateEvent>;
@@ -22,6 +27,6 @@ export default class Room {
     sendState(type: string, content: any, stateKey?: string): Promise<void>;
     get tombstone(): any;
     get roomId(): string;
-    get readEvent(): null;
+    get readEvent(): any;
 }
 export {};

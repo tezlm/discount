@@ -8,6 +8,7 @@ import { Event, StateEvent } from "./event.js";
 export interface ClientConfig {
   token: string,
   baseUrl: string,
+  userId: string,
 }
 
 export type ClientStatus = "stopped" | "starting" | "syncing" | "reconnecting";
@@ -29,18 +30,23 @@ interface ClientEvents {
   // on(event: "member", listener: (member: Member) => any): this,
   
   // misc
-  on(event: "accountData", listener: (events: [api.AccountData], room: Room | null) => any): this,
+  // on(event: "accountData", listener: (events: [api.AccountData], room: Room | null) => any): this,
+  on(event: "accountData", listener: (event: api.AccountData) => any): this,
+  on(event: "roomAccountData", listener: (event: api.AccountData, room: Room) => any): this,
   on(event: "notifications", listener: (events: { unread: number, highlight: number }, room: Room) => any): this,
 }
 
 export default class Client extends Emitter implements ClientEvents {
   public status: ClientStatus = "stopped";
   public fetcher: Fetcher;
+  public userId: string;
   public rooms = new Map<string, Room>();
+  public accountData = new Map<string, any>();
   private transactions = new Map<string, Function>();
   
   constructor(config: ClientConfig) {
     super();
+    this.userId = config.userId;
     this.fetcher = new Fetcher(config.token, config.baseUrl);
   }
   
@@ -73,7 +79,10 @@ export default class Client extends Emitter implements ClientEvents {
   
   private handleSync(sync: api.Sync) {
     if (sync.account_data) {
-        for (let event of sync.account_data.events) this.emit("accountData", event);
+        for (let event of sync.account_data.events) {
+          this.accountData.set(event.type, event.content);
+          this.emit("accountData", event);
+        }
     }
     
     if (sync.rooms) {
@@ -95,7 +104,7 @@ export default class Client extends Emitter implements ClientEvents {
             }
             this.rooms.set(id, room);
             // this.emit("join", room);
-            this.emit("join", room.id, (room as any).state, data.timeline?.prev_batch);
+            this.emit("join", room, data.timeline?.prev_batch);
           }
         }
 
@@ -123,11 +132,18 @@ export default class Client extends Emitter implements ClientEvents {
           }
         }
         
-        for (let event of data.account_data?.events ?? []) this.emit("roomAccountData", room.id, event);
+        for (let event of data.account_data?.events ?? []) {
+          room.accountData.set(event.type, event.content);
+          this.emit("roomAccountData", room, event);
+        }
+      
         for (let event of data.ephemeral?.events ?? []) this.emit("ephemeral", event, room);
+      
         if (data.unread_notifications) {
-          const notifs = data.unread_notifications;
-          this.emit("notifications", room, { unread: notifs.notification_count, highlight: notifs.highlight_count });
+          const apiNotifs = data.unread_notifications;
+          const notifs = { unread: apiNotifs.notification_count, highlight: apiNotifs.highlight_count };
+          room.notifications = notifs;
+          this.emit("notifications", room, notifs);
         }
       }
      
@@ -158,7 +174,10 @@ export default class Client extends Emitter implements ClientEvents {
   async start() {
     this.setStatus("starting");
     const filterId = await this.fetcher.postFilter("@bot:celery.eu.org", {
-      room: { state: { lazy_load_members: true } },
+      room: {
+        state: { lazy_load_members: true },
+        timeline: { limit: 0 },
+      },
     });
     this.fetcher.filter = filterId;
     this.sync();

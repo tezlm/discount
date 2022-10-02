@@ -6,6 +6,7 @@ type JoinRule = "invite" | "public" | "knock" | "restricted" | "knock_restricted
 
 export default class Room {
   private state: Array<StateEvent> = [];
+  private _cachePower: object | null = null;
   
   public name: string | null = null;
   public topic: string | null = null;
@@ -13,8 +14,8 @@ export default class Room {
   public type: string | null = null;
   public joinRule: JoinRule = "invite";
   public members: Members = new Members(this);
-  
-  private _cachePower: object | null = null;
+  public accountData: Map<String, any> = new Map();
+  public notifications = { unread: 0, highlight: 0 };
   
   constructor(
     public client: Client,
@@ -39,7 +40,7 @@ export default class Room {
       case "m.room.name":         this.name = event.content.name   ?? null; break;
       case "m.room.topic":        this.topic = event.content.topic ?? null; break;
       case "m.room.avatar":       this.avatar = event.content.url  ?? null; break;
-      case "m.room.create":       this.type = event.content.type   ?? null; break;
+      case "m.room.create":       this.type = event.content.type === "m.space" ? "space" : "room"; break; // TODO: make discard use matrix types rather than space/room stupid idiot design descision by me
       case "m.room.join_rules":   this.joinRule = event.content?.join_rule ?? "invite"; break;
       case "m.room.power_levels": this._cachePower = null; break;
       case "m.room.member":       this.members._handle(event);
@@ -55,10 +56,9 @@ export default class Room {
   get power() {  
     if (this._cachePower) return this._cachePower;
     const power = this.getState("m.room.power_levels")?.content ?? { state_default: 50, users_default: 50 };
-    // power.me = power.users?.[this.client.userId] ?? power.users_default ?? 0;
     this._cachePower = {
       ...power,
-      me: power.users_default,
+      me: power.users?.[this.client.userId] ?? power.users_default ?? 0,
       getBase:  (name: string) => power[name]  ?? power.state_default  ?? 50,
       getEvent: (name: string) => power.events?.[name] ?? power.events_default ?? 0,
       getState: (name: string) => power.state?.[name]  ?? power.state_default  ?? 50,
@@ -80,8 +80,5 @@ export default class Room {
   // TEMP: discard parity
   get tombstone() { return this.getState("m.room.tombstone")?.content }
   get roomId()    { return this.id }
-  get readEvent() {
-    return null;
-    // .accountData?.get("m.fully_read")?.event_id ?? null;
-  }
+  get readEvent() { return this.accountData?.get("m.fully_read")?.event_id ?? null }
 }

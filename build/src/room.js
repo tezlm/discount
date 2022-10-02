@@ -3,13 +3,15 @@ export default class Room {
     client;
     id;
     state = [];
+    _cachePower = null;
     name = null;
     topic = null;
     avatar = null;
     type = null;
     joinRule = "invite";
     members = new Members(this);
-    _cachePower = null;
+    accountData = new Map();
+    notifications = { unread: 0, highlight: 0 };
     constructor(client, id) {
         this.client = client;
         this.id = id;
@@ -37,15 +39,17 @@ export default class Room {
                 this.avatar = event.content.url ?? null;
                 break;
             case "m.room.create":
-                this.type = event.content.type ?? null;
-                break;
+                this.type = event.content.type === "m.space" ? "space" : "room";
+                break; // TODO: make discard use matrix types rather than space/room stupid idiot design descision by me
             case "m.room.join_rules":
                 this.joinRule = event.content?.join_rule ?? "invite";
                 break;
             case "m.room.power_levels":
                 this._cachePower = null;
                 break;
-            case "m.room.member": this.members._handle(event);
+            case "m.room.member":
+                console.log("member", event);
+                this.members._handle(event);
         }
         this.state.push(event);
     }
@@ -56,10 +60,9 @@ export default class Room {
         if (this._cachePower)
             return this._cachePower;
         const power = this.getState("m.room.power_levels")?.content ?? { state_default: 50, users_default: 50 };
-        // power.me = power.users?.[this.client.userId] ?? power.users_default ?? 0;
         this._cachePower = {
             ...power,
-            me: power.users_default,
+            me: power.users?.[this.client.userId] ?? power.users_default ?? 0,
             getBase: (name) => power[name] ?? power.state_default ?? 50,
             getEvent: (name) => power.events?.[name] ?? power.events_default ?? 0,
             getState: (name) => power.state?.[name] ?? power.state_default ?? 50,
@@ -78,8 +81,5 @@ export default class Room {
     // TEMP: discard parity
     get tombstone() { return this.getState("m.room.tombstone")?.content; }
     get roomId() { return this.id; }
-    get readEvent() {
-        return null;
-        // .accountData?.get("m.fully_read")?.event_id ?? null;
-    }
+    get readEvent() { return this.accountData?.get("m.fully_read")?.event_id ?? null; }
 }
