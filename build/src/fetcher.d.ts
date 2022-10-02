@@ -20,8 +20,11 @@ export default class Fetcher {
     fetchMedia(path: string, options: FetchOptions): Promise<any>;
     sync(since?: string): Promise<api.Sync>;
     postFilter(userId: string, filter: Partial<api.Filter>): Promise<string>;
-    sendEvent(roomId: string, type: string, content: any, transaction: string): Promise<string>;
-    sendState(roomId: string, type: string, content: any, stateKey?: string): Promise<string>;
-    redact(roomId: string, eventId: string, transaction: string, reason?: string): Promise<string>;
+    fetchMembers(roomId: string): Promise<{
+        chunk: Array<api.RawStateEvent>;
+    }>;
+    sendEvent(roomId: string, type: string, content: any, transaction: string): Promise<object>;
+    sendState(roomId: string, type: string, content: any, stateKey?: string): Promise<object>;
+    redact(roomId: string, eventId: string, transaction: string, reason?: string): Promise<object>;
 }
 export {};

@@ -1,4 +1,5 @@
 import type { RawEvent, RawStateEvent } from "./event.js";
+export type { RawEvent, RawStateEvent } from "./event.js";
 
 export interface Error {
   errcode: string,

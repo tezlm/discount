@@ -18,11 +18,20 @@ export default class Member {
   }
   
   get user(): User {
-    return new User(this.client, this.event.stateKey!, this.event.content);
+    return new User(this.client, this.event.stateKey, this.event.content);
+  }
+  
+  get id(): string {
+    return this.event.stateKey;
   }
   
   get membership(): Membership {
     return this.event.content.membership ?? "leave";
+  }
+  
+  get power(): number {
+    // TODO: power should always be defined in room
+    return (this.room.power as any)?.getUser(this.id) ?? 0;
   }
   
   // ban(reason: string) {}

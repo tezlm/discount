@@ -9,5 +9,7 @@ export default class Member {
     private event;
     constructor(client: Client, room: Room, event: StateEvent);
     get user(): User;
+    get id(): string;
     get membership(): Membership;
+    get power(): number;
 }

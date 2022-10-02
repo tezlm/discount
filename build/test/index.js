@@ -3,7 +3,7 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 const dir = join(dirname(fileURLToPath(import.meta.url)), "units");
 let pass = 0, fail = 0;
-for (let file of await readdir(dir)) {
+for (let file of (await readdir(dir)).sort()) {
     console.log(`test \x1b[1m${file}\x1b[0m`);
     const mod = await import(join(dir, file));
     mod.test(tester);
