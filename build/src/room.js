@@ -47,9 +47,7 @@ export default class Room {
             case "m.room.power_levels":
                 this._cachePower = null;
                 break;
-            case "m.room.member":
-                console.log("member", event);
-                this.members._handle(event);
+            case "m.room.member": this.members._handle(event);
         }
         this.state.push(event);
     }

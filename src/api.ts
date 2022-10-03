@@ -92,3 +92,10 @@ export interface Filter {
   presence?: EventFilter,
   room?: RoomFilter,
 }
+
+export interface Messages {
+  start: string,
+  end: string,
+  chunk: Array<RawEvent>
+  state: Array<RawStateEvent>
+}

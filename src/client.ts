@@ -173,7 +173,7 @@ export default class Client extends Emitter implements ClientEvents {
   
   async start() {
     this.setStatus("starting");
-    const filterId = await this.fetcher.postFilter("@bot:celery.eu.org", {
+    const filterId = await this.fetcher.postFilter(this.userId, {
       room: {
         state: { lazy_load_members: true },
         timeline: { limit: 0 },
