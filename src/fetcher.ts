@@ -78,25 +78,25 @@ export default class Fetcher {
   }
   
   // content
-  // fetchMessages(roomId, startId, direction) {
-  //   return this.fetch("GET", `/rooms/${encode(roomId)}/messages?from=${encode(startId)}&dir=${direction}&limit=200`);
-  // }
+  async fetchMessages(roomId: string, from: string, direction: "b" | "f"): Promise<api.Messages> {
+    return this.fetchClient(`/rooms/${encode(roomId)}/messages?from=${encode(from)}&dir=${direction}&limit=200`, {});
+  }
 
-  // fetchContext(roomId, eventId) {
-  //   return this.fetch("GET", `/rooms/${encode(roomId)}/context/${encode(eventId)}?limit=200`);
+  // async fetchContext(roomId: string, eventId: string) {
+    // return this.fetchClient(`/rooms/${encode(roomId)}/context/${encode(eventId)}?limit=200`, {});
   // }
   
-  // fetchEvent(roomId, eventId) {
-  //   return this.fetch("GET", `/rooms/${encode(roomId)}/event/${encode(eventId)}`);
-  // }
-  
-  async fetchMembers(roomId: string): Promise<{ chunk: Array<api.RawStateEvent> }> {
-    return await this.fetchClient(`/rooms/${encode(roomId)}/members`, {});
+  async fetchEvent(roomId: string, eventId: string): Promise<api.RawEvent> {
+    return this.fetchClient(`/rooms/${encode(roomId)}/event/${encode(eventId)}`, {});
   }
   
-  // fetchUser(userId) {
-  //   return this.fetch("GET", `/profile/${encode(userId)}`);
-  // }  
+  async fetchMembers(roomId: string): Promise<{ chunk: Array<api.RawStateEvent> }> {
+    return this.fetchClient(`/rooms/${encode(roomId)}/members`, {});
+  }
+  
+  // async fetchUser(userId: string) {
+    // return this.fetchClient(`/profile/${encode(userId)}`, {});
+  // }
   
   // events
   async sendEvent(roomId: string, type: string, content: any, transaction: string): Promise<{ event_id: string }> {

@@ -18,7 +18,7 @@ export default class Members extends Map<string, Member> {
     this.set(id, member);
     
     this.sortCache.delete(event.content.membership);
-    this.sortCache.delete(event.unsigned.prev_content?.membership);
+    this.sortCache.delete(event.unsigned?.prev_content?.membership);
   }
   
   async fetch() {

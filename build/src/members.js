@@ -16,7 +16,7 @@ export default class Members extends Map {
         const member = new Member(this.client, this.room, event);
         this.set(id, member);
         this.sortCache.delete(event.content.membership);
-        this.sortCache.delete(event.unsigned.prev_content?.membership);
+        this.sortCache.delete(event.unsigned?.prev_content?.membership);
     }
     async fetch() {
         if (this.request)
