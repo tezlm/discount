@@ -93,14 +93,14 @@ export default class Client extends Emitter implements ClientEvents {
           if (this.rooms.has(id)) {
             const room = this.rooms.get(id);
             for (let raw of data.state.events) {
-              const state = new StateEvent(this, room!, raw);
+              const state = new StateEvent(room!, raw);
               room!.handleState(state);
               this.emit("state", state);
             }
           } else {
             const room = new Room(this, id);
             for (let raw of data.state.events) {
-              room.handleState(new StateEvent(this, room, raw), false);
+              room.handleState(new StateEvent(room, raw), false);
             }
             this.rooms.set(id, room);
             // this.emit("join", room);
@@ -115,7 +115,7 @@ export default class Client extends Emitter implements ClientEvents {
         if (data.timeline) {
           if (!room) throw "how did we get here?";
           for (let raw of data.timeline.events) {
-            const event = new Event(this, room!, raw);
+            const event = new Event(room!, raw);
             if (raw.type === "m.room.redaction") {              
               // this.emit("redact", event);
               // this.emit("event", event);

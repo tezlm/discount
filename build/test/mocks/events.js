@@ -8,7 +8,7 @@ const client = new Client({
 });
 let i = 0;
 export function makeEvent(content, data = {}) {
-    return new Event(client, room, {
+    return new Event(room, {
         event_id: `$event${i++}`,
         sender: "@user:example.org",
         unsigned: {},
@@ -19,7 +19,7 @@ export function makeEvent(content, data = {}) {
     });
 }
 export function makeStateEvent(content, data = {}) {
-    return new StateEvent(client, room, {
+    return new StateEvent(room, {
         event_id: `$event${i++}`,
         sender: "@user:example.org",
         unsigned: {},

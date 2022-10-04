@@ -1,18 +1,15 @@
 export class Event {
-    client;
     room;
     raw;
-    relations = [];
+    client = this.room.client;
+    // public relationsIn: Array<Event> = [];
+    // public relationsOut: Array<Event> = [];
     // private cacheContent: any = {};
-    constructor(client, room, raw) {
-        this.client = client;
+    constructor(room, raw) {
         this.room = room;
         this.raw = raw;
     }
     get id() {
-        return this.raw.event_id;
-    }
-    get eventId() {
         return this.raw.event_id;
     }
     get type() {
@@ -43,10 +40,13 @@ export class Event {
     get stateKey() {
         return this.raw.state_key;
     }
+    // TEMP: discard compat
+    get eventId() { return this.raw.event_id; }
+    get roomId() { return this.room.id; }
 }
 export class StateEvent extends Event {
-    constructor(client, room, raw) {
-        super(client, room, raw);
+    constructor(room, raw) {
+        super(room, raw);
     }
     get stateKey() {
         return this.raw.state_key;

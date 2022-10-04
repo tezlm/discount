@@ -23,7 +23,7 @@ export default class Room {
     getAllState(type: string): Array<StateEvent>;
     handleState(event: StateEvent, check?: boolean): void;
     get power(): object | null;
-    sendEvent(type: string, content: any): Promise<StateEvent | import("./event").Event<import("./event").RawEvent>>;
+    sendEvent(type: string, content: any): Promise<import("./event").Event<import("./event").RawEvent> | StateEvent>;
     sendState(type: string, content: any, stateKey?: string): Promise<void>;
     get tombstone(): any;
     get roomId(): string;
