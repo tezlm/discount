@@ -1,4 +1,3 @@
-import type Client from "./client";
 import type Room from "./room";
 import type { StateEvent } from "./event";
 // import User from "./user";
@@ -7,12 +6,12 @@ export type Membership = "join" | "knock" | "invite" | "leave" | "ban";
 
 // export default class Member extends User {
 export default class Member {
+  public client = this.room.client;
   public id: string;
   public name: string;
   public avatar: string;
   
   constructor(
-    public client: Client,
     public room: Room,
     public event: StateEvent
   ) {

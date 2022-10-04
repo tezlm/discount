@@ -20,6 +20,8 @@ export default class Fetcher {
     fetchMedia(path: string, options: FetchOptions): Promise<any>;
     sync(since?: string): Promise<api.Sync>;
     postFilter(userId: string, filter: Partial<api.Filter>): Promise<string>;
+    fetchMessages(roomId: string, from: string, direction: "b" | "f"): Promise<api.Messages>;
+    fetchEvent(roomId: string, eventId: string): Promise<api.RawEvent>;
     fetchMembers(roomId: string): Promise<{
         chunk: Array<api.RawStateEvent>;
     }>;

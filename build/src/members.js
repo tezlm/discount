@@ -13,7 +13,7 @@ export default class Members extends Map {
         if (event.type !== "m.room.member")
             throw "not m.room.member";
         const id = event.stateKey;
-        const member = new Member(this.client, this.room, event);
+        const member = new Member(this.room, event);
         this.set(id, member);
         this.sortCache.delete(event.content.membership);
         this.sortCache.delete(event.unsigned?.prev_content?.membership);
@@ -24,7 +24,7 @@ export default class Members extends Map {
         this.request = this.client.fetcher.fetchMembers(this.room.id)
             .then(({ chunk }) => {
             for (let raw of chunk) {
-                let event = new StateEvent(this.client, this.room, raw);
+                let event = new StateEvent(this.room, raw);
                 this.room.handleState(event);
             }
         });

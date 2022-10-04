@@ -4,7 +4,7 @@ import { Event, StateEvent } from "./event";
 
 export default class Timeline extends Array {
   public client = this.room.client;
-  private relations = new Map<string, Array<Event>>();
+  // private relations = new Map<string, Array<Event>>();
   
   constructor(
     public room: Room,
@@ -22,9 +22,9 @@ export default class Timeline extends Array {
       const res = await this.client.fetcher.fetchMessages(this.room.id, this.batchPrev, "b");
       this.batchPrev = res.end;
       for (let raw of res.state) {
-        this.room.handleState(new StateEvent(this.client, this.room, raw));
+        this.room.handleState(new StateEvent(this.room, raw));
       }
-      for (let raw of res.batch) {
+      for (let raw of res.chunk) {
         if (raw.unsigned?.redacted_because) continue;
         // raw.type === "m.room.redaction"
       }
@@ -37,4 +37,7 @@ export default class Timeline extends Array {
       // }
     }
   }
+  
+  // merge(other: Timeline): boolean {
+  // }
 }

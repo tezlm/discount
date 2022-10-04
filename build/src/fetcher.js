@@ -60,21 +60,21 @@ export default class Fetcher {
         return filter_id;
     }
     // content
-    // fetchMessages(roomId, startId, direction) {
-    //   return this.fetch("GET", `/rooms/${encode(roomId)}/messages?from=${encode(startId)}&dir=${direction}&limit=200`);
-    // }
-    // fetchContext(roomId, eventId) {
-    //   return this.fetch("GET", `/rooms/${encode(roomId)}/context/${encode(eventId)}?limit=200`);
-    // }
-    // fetchEvent(roomId, eventId) {
-    //   return this.fetch("GET", `/rooms/${encode(roomId)}/event/${encode(eventId)}`);
-    // }
-    async fetchMembers(roomId) {
-        return await this.fetchClient(`/rooms/${encode(roomId)}/members`, {});
+    async fetchMessages(roomId, from, direction) {
+        return this.fetchClient(`/rooms/${encode(roomId)}/messages?from=${encode(from)}&dir=${direction}&limit=200`, {});
     }
-    // fetchUser(userId) {
-    //   return this.fetch("GET", `/profile/${encode(userId)}`);
-    // }  
+    // async fetchContext(roomId: string, eventId: string) {
+    // return this.fetchClient(`/rooms/${encode(roomId)}/context/${encode(eventId)}?limit=200`, {});
+    // }
+    async fetchEvent(roomId, eventId) {
+        return this.fetchClient(`/rooms/${encode(roomId)}/event/${encode(eventId)}`, {});
+    }
+    async fetchMembers(roomId) {
+        return this.fetchClient(`/rooms/${encode(roomId)}/members`, {});
+    }
+    // async fetchUser(userId: string) {
+    // return this.fetchClient(`/profile/${encode(userId)}`, {});
+    // }
     // events
     async sendEvent(roomId, type, content, transaction) {
         return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${transaction}`, { method: "PUT", body: content });

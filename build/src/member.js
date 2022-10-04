@@ -1,13 +1,12 @@
 // export default class Member extends User {
 export default class Member {
-    client;
     room;
     event;
+    client = this.room.client;
     id;
     name;
     avatar;
-    constructor(client, room, event) {
-        this.client = client;
+    constructor(room, event) {
         this.room = room;
         this.event = event;
         if (!event.stateKey)

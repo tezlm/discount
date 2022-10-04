@@ -10,7 +10,7 @@ const client = new Client({
 
 let i = 0;
 export function makeEvent(content: any, data: Partial<RawEvent> = {}): Event {
-  return new Event(client, room, {
+  return new Event(room, {
     event_id: `$event${i++}`,
     sender: "@user:example.org",
     unsigned: {},
@@ -22,7 +22,7 @@ export function makeEvent(content: any, data: Partial<RawEvent> = {}): Event {
 }
 
 export function makeStateEvent(content: any, data: Partial<RawStateEvent> = {}): StateEvent {
-  return new StateEvent(client, room, {
+  return new StateEvent(room, {
     event_id: `$event${i++}`,
     sender: "@user:example.org",
     unsigned: {},

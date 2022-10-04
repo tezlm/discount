@@ -1,4 +1,3 @@
-import type Client from "./client";
 import type Room from "./room";
 export interface RawEvent {
     event_id: string;
@@ -13,23 +12,23 @@ export interface RawStateEvent extends RawEvent {
     state_key: string;
 }
 export declare class Event<RawType extends RawEvent = RawEvent> {
-    client: Client;
     room: Room;
     protected raw: RawType;
-    relations: Array<Event>;
-    constructor(client: Client, room: Room, raw: RawType);
+    client: import("./client").default;
+    constructor(room: Room, raw: RawType);
     get id(): string;
-    get eventId(): string;
     get type(): string;
     get sender(): string;
     get content(): any;
     get unsigned(): any;
     get timestamp(): Date;
     isState(): this is StateEvent;
-    redact(reason?: string): Promise<StateEvent | Event<RawEvent>>;
+    redact(reason?: string): Promise<Event<RawEvent> | StateEvent>;
     get stateKey(): string | undefined;
+    get eventId(): string;
+    get roomId(): string;
 }
 export declare class StateEvent extends Event<RawStateEvent> {
-    constructor(client: Client, room: Room, raw: RawStateEvent);
+    constructor(room: Room, raw: RawStateEvent);
     get stateKey(): string;
 }
