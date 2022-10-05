@@ -14,6 +14,11 @@ export interface RawStateEvent extends RawEvent {
   state_key: string,
 }
 
+export interface RawEphemeralEvent {
+  content: any,
+  type: string,
+}
+
 export class Event<RawType extends RawEvent = RawEvent> {  
   public client = this.room.client;
   // public relationsIn: Array<Event> = [];
@@ -22,7 +27,7 @@ export class Event<RawType extends RawEvent = RawEvent> {
   
   constructor(
     public room: Room,
-    protected raw: RawType,
+    public raw: RawType,
   ) {}  
   
   get id(): string {
@@ -78,5 +83,22 @@ export class StateEvent extends Event<RawStateEvent> {
   
   get stateKey(): string {
     return this.raw.state_key;
+  }
+}
+
+export class EphemeralEvent {  
+  public client = this.room.client;
+  
+  constructor(
+    public room: Room,
+    public raw: RawEphemeralEvent,
+  ) {}  
+  
+  get type(): string {
+    return this.raw.type;
+  }
+  
+  get content(): string {
+    return this.raw.content;
   }
 }
