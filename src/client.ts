@@ -3,7 +3,7 @@ import Fetcher from "./fetcher.js";
 import type * as api from "./api.js"
 
 import Room from "./room.js";
-import { Event, StateEvent } from "./event.js";
+import { Event, StateEvent, EphemeralEvent } from "./event.js";
 
 export interface ClientConfig {
   token: string,
@@ -21,7 +21,7 @@ interface ClientEvents {
   // events
   on(event: "event", listener: (event: Event) => any): this,
   on(event: "state", listener: (state: StateEvent) => any): this,
-  // on(event: "ephermeral", listener: () => any): this,
+  on(event: "ephemeral", listener: (edu: EphemeralEvent) => any): this,
   
   // room members
   // on(event: "join", listener: (member: Member) => any): this,
@@ -137,7 +137,7 @@ export default class Client extends Emitter implements ClientEvents {
           this.emit("roomAccountData", room, event);
         }
       
-        for (let event of data.ephemeral?.events ?? []) this.emit("ephemeral", event, room);
+        for (let event of data.ephemeral?.events ?? []) this.emit("ephemeral", new EphemeralEvent(room, event));
       
         if (data.unread_notifications) {
           const apiNotifs = data.unread_notifications;
