@@ -23,11 +23,10 @@ interface ClientEvents {
   on(event: "state", listener: (state: StateEvent) => any): this,
   on(event: "ephemeral", listener: (edu: EphemeralEvent) => any): this,
   
-  // room members
+  // membership
   // on(event: "join", listener: (member: Member) => any): this,
   // on(event: "invite", listener: (member: Member) => any): this,
   // on(event: "leave", listener: (member: Member) => any): this,
-  // on(event: "member", listener: (member: Member) => any): this,
   
   // misc
   // on(event: "accountData", listener: (events: [api.AccountData], room: Room | null) => any): this,
@@ -119,10 +118,10 @@ export default class Client extends Emitter implements ClientEvents {
             if (raw.type === "m.room.redaction") {              
               // this.emit("redact", event);
               // this.emit("event", event);
-              this.emit("event", id, raw);
+              this.emit("event", event);
             } else {
               // this.emit("event", event);
-              this.emit("event", id, raw);
+              this.emit("event", event);
             }
             if (raw.unsigned?.transaction_id) {
               const txn = raw.unsigned.transaction_id;
