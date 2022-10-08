@@ -74,7 +74,7 @@ export class Event<RawType extends RawEvent = RawEvent> {
   
   get sender(): Member {
     const member = this.room.members.get(this.raw.sender);
-    if (!member) throw "could not find member";
+    if (!member) throw "could not find member " + this.raw.sender;
     return member;
   }
   
@@ -82,7 +82,7 @@ export class Event<RawType extends RawEvent = RawEvent> {
   get content(): any {
     if (this._contentCache) return this._contentCache;
     
-    const edit = this.relationsIn?.find(i => i.relType === "m.replace");   
+    const edit = this.relationsIn?.findLast(i => i.relType === "m.replace");   
     const content = edit
       ? { ...edit.event.content["m.new_content"], "m.relates_to": this.raw.content["m.relates_to"] }
       : this.raw.content;
@@ -105,7 +105,7 @@ export class Event<RawType extends RawEvent = RawEvent> {
   
   async redact(reason?: string) {
     const txn = Math.random().toString(36);
-    this.client.fetcher.redact(this.room.id, this.id, txn, reason);
+    this.client.fetcher.redactEvent(this.room.id, this.id, reason);
     return await this.client.transaction(txn);
   }
   
@@ -118,8 +118,8 @@ export class Event<RawType extends RawEvent = RawEvent> {
   
   // TEMP: discard compat
   get eventId(): string { return this.raw.event_id }
-  get roomId(): string { return this.room.id }  
-  get date(): Date { return this.timestamp }  
+  get roomId(): string { return this.room.id }
+  get date(): Date { return this.timestamp }
 }
 
 export class StateEvent extends Event<RawStateEvent> {  
@@ -144,7 +144,7 @@ export class EphemeralEvent {
     return this.raw.type;
   }
   
-  get content(): string {
+  get content(): any {
     return this.raw.content;
   }
 }

@@ -33,7 +33,7 @@ export default class Members extends Map<string, Member> {
     return this.request;
   }
   
-  with(membership: Membership) {
+  with(membership: Membership): Array<Member> {
     if (this.sortCache.has(membership)) return this.sortCache.get(membership);
     const cmp = (a: any, b: any) => a > b ? 1 : a < b ? -1 : 0;
     const members = [...this.values()]

@@ -1,6 +1,7 @@
 import type Client from "./client";
 import type { StateEvent } from "./event";
 import Members from "./members";
+// import Events from "./events";
 
 type JoinRule = "invite" | "public" | "knock" | "restricted" | "knock_restricted";
 
@@ -12,14 +13,14 @@ export default class Room {
   public topic: string | null = null;
   public avatar: string | null = null;
   public type: string | null = null;
-  public joinRule: JoinRule = "invite";
   public members: Members = new Members(this);
-  public accountData: Map<String, any> = new Map();
+  // public events: Events = new Events(this, null as any); // temp. null timeline that will be replaced
+  public accountData: Map<string, { type: string, content: any }> = new Map();
   public notifications = { unread: 0, highlight: 0 };
   
   constructor(
     public client: Client,
-    public id: string,
+    public readonly id: string,
   ) {}
   
   getState(type: string, key = ""): StateEvent | undefined {
@@ -53,7 +54,7 @@ export default class Room {
   // join() {}
   // invite(who: User | string) {}
 
-  get power() {  
+  get power(): any {  
     if (this._cachePower) return this._cachePower;
     const power = this.getState("m.room.power_levels")?.content ?? { state_default: 50, users_default: 50 };
     this._cachePower = {
@@ -81,4 +82,5 @@ export default class Room {
   get tombstone() { return this.getState("m.room.tombstone")?.content }
   get roomId()    { return this.id }
   get readEvent() { return this.accountData?.get("m.fully_read")?.event_id ?? null }
+  public joinRule: JoinRule = "invite";
 }
