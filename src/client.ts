@@ -1,8 +1,9 @@
-import Emitter from "./emitter.js";
-import Fetcher from "./fetcher.js";
-import type * as api from "./api.js"
-
-import Room from "./room.js";
+import Emitter from "./emitter";
+import Fetcher from "./fetcher";
+import type * as api from "./api"
+import Room from "./room";
+import Events from "./events";
+import Timeline from "./timeline";
 import { Event, StateEvent, EphemeralEvent } from "./event.js";
 
 export interface ClientConfig {
@@ -24,9 +25,9 @@ interface ClientEvents {
   on(event: "ephemeral", listener: (edu: EphemeralEvent) => any): this,
   
   // membership
-  // on(event: "join", listener: (member: Member) => any): this,
-  // on(event: "invite", listener: (member: Member) => any): this,
-  // on(event: "leave", listener: (member: Member) => any): this,
+  on(event: "join", listener: (room: Room, prevPatch: string) => any): this,
+  // on(event: "invite", listener: (room: Room) => any): this,
+  on(event: "leave", listener: (room: Room) => any): this,
   
   // misc
   // on(event: "accountData", listener: (events: [api.AccountData], room: Room | null) => any): this,
@@ -96,11 +97,16 @@ export default class Client extends Emitter implements ClientEvents {
               room!.handleState(state);
               this.emit("state", state);
             }
-          } else {
+          } else {            
+            // hacky code™
             const room = new Room(this, id);
+            // const timeline = new Timeline(room.events, data.timeline?.prev_batch ?? null, null);
+            // (room.events as any).live = timeline;
+
             for (let raw of data.state.events) {
               room.handleState(new StateEvent(room, raw), false);
             }
+                        
             this.rooms.set(id, room);
             // this.emit("join", room);
             this.emit("join", room, data.timeline?.prev_batch);
@@ -120,6 +126,7 @@ export default class Client extends Emitter implements ClientEvents {
               // this.emit("event", event);
               this.emit("event", event);
             } else {
+              // room.events.live._add(event);
               // this.emit("event", event);
               this.emit("event", event);
             }
@@ -170,7 +177,7 @@ export default class Client extends Emitter implements ClientEvents {
     });
   }
   
-  async start() {
+  public async start() {
     this.setStatus("starting");
     const filterId = await this.fetcher.postFilter(this.userId, {
       room: {
