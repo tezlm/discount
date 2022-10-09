@@ -41,7 +41,7 @@ export default class Room {
       case "m.room.name":         this.name = event.content.name   ?? null; break;
       case "m.room.topic":        this.topic = event.content.topic ?? null; break;
       case "m.room.avatar":       this.avatar = event.content.url  ?? null; break;
-      case "m.room.create":       this.type = event.content.type === "m.space" ? "space" : "room"; break; // TODO: make discard use matrix types rather than space/room stupid idiot design descision by me
+      case "m.room.create":       this.type = event.content.type   ?? null; break;
       case "m.room.join_rules":   this.joinRule = event.content?.join_rule ?? "invite"; break;
       case "m.room.power_levels": this._cachePower = null; break;
       case "m.room.member":       this.members._handle(event);
