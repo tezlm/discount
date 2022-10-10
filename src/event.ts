@@ -1,6 +1,13 @@
 import type Room from "./room";
 import type Member from "./member";
 
+const interns: Record<string, string> = Object.create(null);
+function intern(str: string): string {
+  if (interns[str]) return interns[str];
+  interns[str] = str;
+  return str;
+}
+
 export interface RawEvent {
   event_id: string,
   type: string,
@@ -27,18 +34,26 @@ export interface Relation {
 
 export class Event<RawType extends RawEvent = RawEvent> {  
   public client = this.room.client;
+  public raw: RawType;
   public relationsIn:  Array<Relation> | null = null; // events pointing to me
   public relationsOut: Array<Relation> | null = null; // events i pont to
   private _contentCache: any = null;
+  
+  public id: string;
+  public type: string;
   
   // TEMP: discard compat
   public flags = new Set();
   public reactions = null; // move to getter?
   
-  constructor(
-    public room: Room,
-    public raw: RawType,
-  ) {}
+  constructor(public room: Room, raw: RawType) {
+    raw.type = intern(raw.type);
+    raw.sender = intern(raw.sender);
+    if (raw.state_key) raw.state_key = intern(raw.state_key);
+    this.id = intern(raw.event_id);
+    this.type = intern(raw.type);
+    this.raw = raw;
+  }
   
   parseRelation(event: Event, relType: string) {
     this._handleRelation(event, relType);
@@ -62,14 +77,6 @@ export class Event<RawType extends RawEvent = RawEvent> {
     } else {
       this.relationsIn.push({ event, relType });
     }
-  }
-    
-  get id(): string {
-    return this.raw.event_id;
-  }  
-  
-  get type(): string {
-    return this.raw.type;
   }
   
   get sender(): Member {

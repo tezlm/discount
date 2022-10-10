@@ -32,9 +32,17 @@ export default class Member {
     return (this.room.power as any)?.getUser(this.id) ?? 0;
   }
   
-  // ban(reason: string) {}
-  // kick(reason: string) {}
-  // unban(reason: string) {}
+  async ban(reason: string) {
+    this.client.fetcher.banMember(this.room.id, this.id, reason);
+  }
+  
+  async kick(reason?: string) {
+    this.client.fetcher.kickMember(this.room.id, this.id, reason);
+  }
+  
+  async unban(reason: string) {
+    this.client.fetcher.unbanMember(this.room.id, this.id, reason);
+  }
   
   // TEMP: discard parity
   get userId(): string { return this.id }
