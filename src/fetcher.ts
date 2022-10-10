@@ -111,4 +111,36 @@ export default class Fetcher {
   async redactEvent(roomId: string, eventId: string, reason?: string): Promise<object> {
     return await this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}`, { method: "PUT", body: reason ? { reason } : null });
   }
+  
+  // membership
+  async kickMember(roomId: string, userId: string, reason?: string) {
+    return await this.fetchClient(`/rooms/${encode(roomId)}/kick`, {
+      method: "POST",
+      body: {
+        user_id: userId,
+       ...(reason && { reason }),
+      }
+    });
+  }
+  
+  async banMember(roomId: string, userId: string, reason?: string) {
+    return await this.fetchClient(`/rooms/${encode(roomId)}/ban`, {
+      method: "POST",
+      body: {
+        user_id: userId,
+       ...(reason && { reason }),
+      }
+    });
+  }
+  
+  
+  async unbanMember(roomId: string, userId: string, reason?: string) {
+    return await this.fetchClient(`/rooms/${encode(roomId)}/unban`, {
+      method: "POST",
+      body: {
+        user_id: userId,
+       ...(reason && { reason }),
+      }
+    });
+  }
 }
