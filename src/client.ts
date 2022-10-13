@@ -2,6 +2,7 @@ import Emitter from "./emitter";
 import Fetcher from "./fetcher";
 import type * as api from "./api"
 import Room from "./room";
+import Invite from "./invite";
 import Events from "./events";
 import Timeline from "./timeline";
 import { Event, StateEvent, EphemeralEvent } from "./event.js";
@@ -26,8 +27,12 @@ interface ClientEvents {
   
   // membership
   on(event: "join", listener: (room: Room, prevPatch: string) => any): this,
-  // on(event: "invite", listener: (room: Room) => any): this,
+  on(event: "invite", listener: (room: Invite) => any): this,
   on(event: "leave", listener: (room: Room) => any): this,
+  on(event: "leave-invite", listener: (room: Invite) => any): this, // temporary for rejecting/uninviting
+  // i want to replace special case "invite" with a room or room-compatible class
+  // so that i can use standard events (state/leave/roomAccountData) with it
+  // maybe have a base room -> joined room/invited room/left room?
   
   // misc
   // on(event: "accountData", listener: (events: [api.AccountData], room: Room | null) => any): this,
@@ -41,6 +46,7 @@ export default class Client extends Emitter implements ClientEvents {
   public fetcher: Fetcher;
   public userId: string;
   public rooms = new Map<string, Room>();
+  public invites = new Map<string, Invite>();
   public accountData = new Map<string, any>();
   private transactions = new Map<string, Function>();
   private abort = new AbortController();
@@ -80,7 +86,7 @@ export default class Client extends Emitter implements ClientEvents {
     const sync = await this.fetcher.sync(since, this.abort)
       .catch((err) => this.handleError(err, since));
     if (!sync) return;
-    this.handleSync(sync);
+    await this.handleSync(sync);
 
     if (this.status === "starting") {
       this.setStatus("syncing");
@@ -92,7 +98,7 @@ export default class Client extends Emitter implements ClientEvents {
     this.sync(sync.next_batch);
   }
   
-  private handleSync(sync: api.Sync) {
+  private async handleSync(sync: api.Sync) {
     if (sync.account_data) {
         for (let event of sync.account_data.events) {
           this.accountData.set(event.type, event.content);
@@ -118,10 +124,17 @@ export default class Client extends Emitter implements ClientEvents {
             // const timeline = new Timeline(room.events, data.timeline?.prev_batch ?? null, null);
             // (room.events as any).live = timeline;
 
-            for (let raw of data.state.events) {
-              room.handleState(new StateEvent(room, raw), false);
+            if (this.invites.has(id)) {
+              for (let raw of await this.fetcher.fetchState(id)) {
+                room.handleState(new StateEvent(room, raw), false);
+              }
+            } else {
+              for (let raw of data.state.events) {
+                room.handleState(new StateEvent(room, raw), false);
+              }
             }
                         
+            this.invites.delete(id);
             this.rooms.set(id, room);
             // this.emit("join", room);
             this.emit("join", room, data.timeline?.prev_batch);
@@ -168,10 +181,29 @@ export default class Client extends Emitter implements ClientEvents {
         }
       }
      
-     for (let id in r.leave ?? {}) {
+
+      for (let id in r.invite ?? {}) {
+        if (this.invites.has(id)) {
+          const invite = this.invites.get(id);
+          for (let ev of r.invite![id].invite_state.events) invite?.handleState(ev);
+        } else {
+          const invite = new Invite(this, id);
+          for (let ev of r.invite![id].invite_state.events) invite.handleState(ev, false);
+          this.invites.set(id, invite);
+          this.emit("invite", invite);
+        }
+      }
+      
+      for (let id in r.leave ?? {}) {
         if (this.rooms.has(id)) {
-          this.emit("leave", this.rooms.get(id));
+          const room = this.rooms.get(id);
           this.rooms.delete(id);
+          this.emit("leave", room);
+        }
+        if (this.invites.has(id)) {
+          const invite = this.invites.get(id);
+          this.invites.delete(id);
+          this.emit("leave-invite", invite);
         }
       }
     }

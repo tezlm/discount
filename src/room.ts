@@ -60,7 +60,6 @@ export default class Room {
     this._cachePower = {
       ...power,
       me: power.users?.[this.client.userId] ?? power.users_default ?? 0,
-      getBase:  (name: string) => power[name]  ?? power.state_default  ?? 50,
       getEvent: (name: string) => power.events?.[name] ?? power.events_default ?? 0,
       getState: (name: string) => power.state?.[name]  ?? power.state_default  ?? 50,
       getUser:  (id: string)   => power.users?.[id]    ?? power.users_default  ?? 0,

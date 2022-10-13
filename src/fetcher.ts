@@ -88,6 +88,10 @@ export default class Fetcher {
     // return this.fetchClient(`/profile/${encode(userId)}`, {});
   // }
   
+  async fetchState(roomId: string): Promise<Array<api.RawStateEvent>> {
+    return this.fetchClient(`/rooms/${encode(roomId)}/state`, {});
+  }
+  
   // events
   async sendEvent(roomId: string, type: string, content: any, transaction: string): Promise<{ event_id: string }> {
     return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${transaction}`, { method: "PUT", body: content });
@@ -123,7 +127,6 @@ export default class Fetcher {
     });
   }
   
-  
   async unbanMember(roomId: string, userId: string, reason?: string) {
     return await this.fetchClient(`/rooms/${encode(roomId)}/unban`, {
       method: "POST",
@@ -131,6 +134,20 @@ export default class Fetcher {
         user_id: userId,
        ...(reason && { reason }),
       }
+    });
+  }
+  
+  async joinRoom(roomId: string) {
+    return await this.fetchClient(`/rooms/${encode(roomId)}/join`, {
+      method: "POST",
+      body: {}
+    });
+  }
+  
+  async leaveRoom(roomId: string) {
+    return await this.fetchClient(`/rooms/${encode(roomId)}/leave`, {
+      method: "POST",
+      body: {}
     });
   }
 }
