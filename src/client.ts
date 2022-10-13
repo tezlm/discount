@@ -43,6 +43,7 @@ export default class Client extends Emitter implements ClientEvents {
   public rooms = new Map<string, Room>();
   public accountData = new Map<string, any>();
   private transactions = new Map<string, Function>();
+  private abort = new AbortController();
   
   constructor(config: ClientConfig) {
     super();
@@ -53,28 +54,42 @@ export default class Client extends Emitter implements ClientEvents {
   private setStatus(status: ClientStatus) {
     this.emit("status", status);
     this.status = status;
-  }
+  }  
   
-  private handleError(error: any, since? : string) {
-    console.log(error);
+  private async handleError(error: any, since? : string) {
     if (error.errcode) throw new Error(error);
-    this.retry(1000, since);
+    if (error.name === "AbortError") return;
+    
+    let timeout = 1000;
+    while(true) {
+      try {
+        const sync = await this.fetcher.sync(since, this.abort);
+        if (!sync) continue;
+        this.handleSync(sync);
+        break;
+      } catch(err) {
+        if (error.errcode) throw new Error(error);
+        if (error.name === "AbortError") return;
+        
+        await new Promise(res => setTimeout(res, timeout *= 2));
+      }
+    }
   }
   
-  private retry(timeout: number, since?: string) {
-    setTimeout(async () => {
-      const sync = await this.fetcher.sync(since)
-        .catch(() => this.retry(timeout * 2, since));
-      if (!sync) return;
-      this.handleSync(sync);
-    }, timeout);
-  }
-    
   private async sync(since?: string) {
-    const sync = await this.fetcher.sync(since)
+    const sync = await this.fetcher.sync(since, this.abort)
       .catch((err) => this.handleError(err, since));
     if (!sync) return;
     this.handleSync(sync);
+
+    if (this.status === "starting") {
+      this.setStatus("syncing");
+      this.emit("ready");
+    } else if (this.status === "reconnecting") {
+      this.setStatus("syncing");
+    }
+    
+    this.sync(sync.next_batch);
   }
   
   private handleSync(sync: api.Sync) {
@@ -160,15 +175,6 @@ export default class Client extends Emitter implements ClientEvents {
         }
       }
     }
-        
-    if (this.status === "starting") {
-      this.setStatus("syncing");
-      this.emit("ready");
-    } else if (this.status === "reconnecting") {
-      this.setStatus("syncing");
-    }
-    
-    this.sync(sync.next_batch);
   }
   
   public async transaction(id: string): Promise<Event | StateEvent> {
@@ -179,13 +185,20 @@ export default class Client extends Emitter implements ClientEvents {
   
   public async start() {
     this.setStatus("starting");
-    const filterId = await this.fetcher.postFilter(this.userId, {
-      room: {
-        state: { lazy_load_members: true },
-        timeline: { limit: 0 },
-      },
-    });
-    this.fetcher.filter = filterId;
+    if (!this.fetcher.filter) {
+      const filterId = await this.fetcher.postFilter(this.userId, {
+        room: {
+          state: { lazy_load_members: true },
+          timeline: { limit: 0 },
+        },
+      });
+      this.fetcher.filter = filterId;
+    }
     this.sync();
+  }
+  
+  public async stop() {
+    this.abort.abort();
+    this.setStatus("stopped");
   }
 }
