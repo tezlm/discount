@@ -5,6 +5,7 @@ interface FetchOptions {
   query?: { [name: string]: string | undefined },
   headers?: { [name: string]: string },
   body?: any,
+  abort?: AbortController,
 }
 
 const encode = encodeURIComponent;
@@ -28,26 +29,15 @@ export default class Fetcher {
   
   async fetchUnauth(path: string, options: FetchOptions): Promise<any> {
     const query = options.query ? stringifyQueryParams(options.query) : "";
-    const fetchOpts: FetchOptions = {
+    
+    return fetch(`${this.baseUrl}/_matrix${path}${query}`, {
       method: options.method ?? "GET",
       headers: options.headers,
-    };
-    
-    if (options.body) {
-      if (typeof options.body === "object") {
-        fetchOpts.body = JSON.stringify(options.body);
-      } else {
-        fetchOpts.body = options.body;
-      }
-    }
-    
-  	// if (true) {
-  		// const color = ({ GET: '4', POST: '2', DELETE: '1', PUT: '3' })[fetchOpts.method as string] ?? '5';
-  		// console.log(`\x1b[3${color}m${fetchOpts.method}\x1b[0m ${this.baseUrl}/_matrix${path}${query}`);
-  	// }
-    
-    return fetch(`${this.baseUrl}/_matrix${path}${query}`, fetchOpts)
-      .then(res => res.json());
+      signal: options.abort?.signal,
+      ...(options.body && {
+        body: typeof options.body === "object" ? JSON.stringify(options.body) : options.body,
+      }),
+    }).then(res => res.json());
   }
   
   async fetch(path: string, options: FetchOptions): Promise<any> {
@@ -67,9 +57,9 @@ export default class Fetcher {
   }
   
   // syncing
-  async sync(since?: string): Promise<api.Sync> {
+  async sync(since?: string, abort?: AbortController): Promise<api.Sync> {
     const query = { since, filter: this.filter, timeout: "60000" };
-    return this.fetchClient("/sync", { query });
+    return this.fetchClient("/sync", { query, abort });
   }
   
   async postFilter(userId: string, filter: Partial<api.Filter>): Promise<string> {
