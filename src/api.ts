@@ -6,7 +6,7 @@ export interface Error {
   error: string,
 }
 
-interface StrippedState {
+export interface StrippedState {
   content: any,
   sender: string,
   state_key: string,
@@ -33,7 +33,7 @@ export interface Sync {
   presence?: { events: [RawEvent] },
   rooms?: {
     invite?: {
-      [id: string]: { invite_state: [StrippedState] },
+      [id: string]: { invite_state: { events: [StrippedState] } },
     },
     join?: {
       [id: string]: {
