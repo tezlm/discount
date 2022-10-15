@@ -1,7 +1,7 @@
 import type Client from "./client";
 import type { StateEvent } from "./event";
 import Members from "./members";
-// import Events from "./events";
+import Events from "./events";
 
 type JoinRule = "invite" | "public" | "knock" | "restricted" | "knock_restricted";
 
@@ -14,7 +14,7 @@ export default class Room {
   public avatar: string | null = null;
   public type: string | null = null;
   public members: Members = new Members(this);
-  // public events: Events = new Events(this, null as any); // temp. null timeline that will be replaced
+  public events: Events = new Events(this);
   public accountData: Map<string, { type: string, content: any }> = new Map();
   public notifications = { unread: 0, highlight: 0 };
   

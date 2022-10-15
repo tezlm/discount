@@ -4,24 +4,26 @@ import Timeline from "./timeline";
 
 export default class Events extends Map {
   public client = this.room.client;
-  _relations = new Map();
+  public live: Timeline | null = null;
   
-  constructor(
-    public room: Room,
-    public readonly live: Timeline,
-  ) {
+  constructor(public room: Room) {
     super();
   }
   
-  async fetch(id: string): Promise<Event> {
-    if (this.has(id)) return this.get(id);
-    const raw = await this.client.fetcher.fetchEvent(this.room.id, id);
+  async fetch(eventId: string): Promise<Event> {
+    if (this.has(eventId)) return this.get(eventId);
+    const raw = await this.client.fetcher.fetchEvent(this.room.id, eventId);
     const event = new Event(this.room, raw);
-    this.set(id, event);
+    this.set(eventId, event);
     return event;
   }
   
-  async context(_id: string): Promise<Timeline> {
-    throw "unimplemented!";
+  async fetchTimeline(eventId?: string): Promise<Timeline> {
+    if (eventId) {
+      throw "unimplemented! cannot fetch timeline for context";
+    } else {
+      if (this.live) return this.live;
+      throw "unimplemented! cannot fetch new live timeline";
+    }
   }
 }
