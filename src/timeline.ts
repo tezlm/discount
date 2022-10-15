@@ -1,23 +1,19 @@
 import type Room from "./room";
 // import type { RawStateEvent } from "./api";
 import { Event, StateEvent } from "./event";
-import Events from "./events";
  
 export default class Timeline extends Array {
-  public room: Room = this.events.room;
   public client = this.room.client;
+  private events = this.room.events;
   // private relations = new Map<string, Array<Event>>();
   
   constructor(
-    private events: Events,
+    public room: Room,
     private batchPrev: string | null,
     private batchNext: string | null,
   ) {
     super();
   }
-
-  // map(callback: any): Array<any> { return super.map.apply([], callback) }
-  // filter(callback: any): Array<any> { return super.filter.apply([], callback) }
 
   async fetch(direction: "backwards" | "forwards") {
     if (direction === "backwards") {
@@ -34,11 +30,11 @@ export default class Timeline extends Array {
       }
     } else {
       if (!this.batchNext) return 0;
-      // const res = await this.client.fetcher.fetchMessages(this.room.id, this.batchNext, "f");
-      // this.batchNext = res.start;
-      // for (let raw of res.state) {
-        // this.room.handleState(new StateEvent(this.room, raw));
-      // }
+      const res = await this.client.fetcher.fetchMessages(this.room.id, this.batchNext, "f");
+      this.batchNext = res.start;
+      for (let raw of res.state) {
+        this.room.handleState(new StateEvent(this.room, raw));
+      }
     }
   }
 
@@ -58,6 +54,7 @@ export default class Timeline extends Array {
     }
     */
 
+    this.events.set(event.id, event);
     this[toBeginning ? "unshift" : "push"](event);
   }
 }

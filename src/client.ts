@@ -118,11 +118,10 @@ export default class Client extends Emitter implements ClientEvents {
               room!.handleState(state);
               this.emit("state", state);
             }
-          } else {            
-            // hacky code™
+          } else {
             const room = new Room(this, id);
-            // const timeline = new Timeline(room.events, data.timeline?.prev_batch ?? null, null);
-            // (room.events as any).live = timeline;
+            const timeline = new Timeline(room, data.timeline?.prev_batch ?? null, null);
+            room.events.live = timeline;
 
             if (this.invites.has(id)) {
               for (let raw of await this.fetcher.fetchState(id)) {
