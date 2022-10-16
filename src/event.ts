@@ -1,12 +1,6 @@
 import type Room from "./room";
 import type Member from "./member";
-
-const interns: Record<string, string> = Object.create(null);
-function intern(str: string): string {
-  if (interns[str]) return interns[str];
-  interns[str] = str;
-  return str;
-}
+import { intern } from "./util";
 
 export interface RawEvent {
   event_id: string,
@@ -41,6 +35,7 @@ export class Event<RawType extends RawEvent = RawEvent> {
   
   public id: string;
   public type: string;
+  public stateKey: string | undefined;
   
   // TEMP: discard compat
   public flags = new Set();
@@ -49,9 +44,19 @@ export class Event<RawType extends RawEvent = RawEvent> {
   constructor(public room: Room, raw: RawType) {
     raw.type = intern(raw.type);
     raw.sender = intern(raw.sender);
+    raw.event_id = intern(raw.event_id);
     if (raw.state_key) raw.state_key = intern(raw.state_key);
+    if (raw.type === "m.room.membership") {
+      const content = raw.content;
+      content.displayname && (content.displayname = intern(content.displayname));
+      content.avatar_url && (content.avatar_url = intern(content.avatar_url));
+      content.membership && (content.membership = intern(content.membership ));
+    }
+    
     this.id = intern(raw.event_id);
     this.type = intern(raw.type);
+    if (raw.state_key) this.stateKey = intern(raw.state_key);
+    
     this.raw = raw;
   }
   
@@ -107,7 +112,7 @@ export class Event<RawType extends RawEvent = RawEvent> {
   }
   
   isState(): this is StateEvent {
-    return !!this.raw.state_key;
+    return typeof this.raw.state_key !== "undefined";
   }
   
   async redact(reason?: string) {
@@ -119,23 +124,18 @@ export class Event<RawType extends RawEvent = RawEvent> {
   // edit(content: any) {}
   // reply(type: string, content: any) {}
   
-  get stateKey(): string | undefined {
-    return this.raw.state_key;
-  }
-  
   // TEMP: discard compat
   get eventId(): string { return this.raw.event_id }
   get roomId(): string { return this.room.id }
   get date(): Date { return this.timestamp }
 }
 
-export class StateEvent extends Event<RawStateEvent> {  
+export class StateEvent extends Event<RawStateEvent> {
+  public stateKey: string;
+  
   constructor(room: Room, raw: RawStateEvent) {
     super(room, raw);
-  }
-  
-  get stateKey(): string {
-    return this.raw.state_key;
+    this.stateKey = intern(raw.state_key);
   }
 }
 
@@ -153,5 +153,5 @@ export class EphemeralEvent {
   
   get content(): any {
     return this.raw.content;
-  }
+  }  
 }
