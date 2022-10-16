@@ -98,7 +98,7 @@ export default class Fetcher {
   }
   
   async sendState(roomId: string, type: string, content: any, stateKey: string = ""): Promise<object> {
-    return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${stateKey}`, { method: "PUT", body: content });
+    return await this.fetchClient(`/rooms/${encode(roomId)}/state/${encode(type)}/${stateKey}`, { method: "PUT", body: content });
   }
   
   // redact events

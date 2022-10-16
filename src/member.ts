@@ -1,6 +1,7 @@
 import type Room from "./room";
 import type { StateEvent } from "./event";
 // import User from "./user";
+import { intern } from "./util";
 
 export type Membership = "join" | "knock" | "invite" | "leave" | "ban";
 
@@ -18,7 +19,7 @@ export default class Member {
     if (!event.stateKey) throw "event must have stateKey";
     this.room = room;
     this.event = event;
-    this.id = event.stateKey;
+    this.id = intern(event.stateKey);
     this.name = event.content.displayname;
     this.avatar = event.content.avatar_url;
   }
