@@ -50,11 +50,14 @@ export default class Timeline extends Array {
     for (let raw of res.state) {
       this.room.handleState(new StateEvent(this.room, raw));
     }
+    let added = 0;
     for (let raw of res.chunk) {
       if (raw.unsigned?.redacted_because) continue;
       if (raw.type === "m.room.redaction") continue;
       this._add(new Event(this.room, raw), direction === "backwards");
+      added++;
     }
+    return added;
   }
 
   // merge(other: Timeline): boolean {
@@ -86,7 +89,7 @@ export default class Timeline extends Array {
 
     // TEMP: discard doesn't like having m.reaction events in the timeline
     this.events.set(event.id, event);
-    if (event.type !== "m.room.reaction" && !event.content["m.new_content"]) this[toBeginning ? "unshift" : "push"](event);
+    if (event.type !== "m.reaction" && !event.content["m.new_content"]) this[toBeginning ? "unshift" : "push"](event);
   }
   
   _redact(redaction: Event) {
@@ -94,6 +97,11 @@ export default class Timeline extends Array {
     const redactedEvent = this.events.get(redactedId);
     const idx = this.lastIndexOf(redactedEvent);
     if (idx !== -1) this.splice(idx, 1);
+    if (redactedEvent?.relationsOut) {
+      for (let rel of redactedEvent.relationsOut) {
+        rel.event._handleUnrelation({ ...rel, event: redactedEvent });
+      }
+    }
     this.events.delete(redactedId);
   }
 }

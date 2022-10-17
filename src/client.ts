@@ -131,11 +131,10 @@ export default class Client extends Emitter implements ClientEvents {
                 room.handleState(new StateEvent(room, raw), false);
               }
             }
-                        
+            
             this.invites.delete(id);
             this.rooms.set(id, room);
-            // this.emit("join", room);
-            this.emit("join", room, data.timeline?.prev_batch);
+            this.emit("join", room);
           }
         }
 
