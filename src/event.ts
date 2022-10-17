@@ -10,6 +10,7 @@ export interface RawEvent {
   unsigned: any,
   origin_server_ts: number,
   state_key?: string,
+  redacts?: string,
 }
 
 export interface RawStateEvent extends RawEvent {
@@ -24,6 +25,8 @@ export interface RawEphemeralEvent {
 export interface Relation {
   event: Event,
   relType: string,
+  key?: string,
+  fallback: boolean,
 }
 
 export class Event<RawType extends RawEvent = RawEvent> {  
@@ -59,12 +62,10 @@ export class Event<RawType extends RawEvent = RawEvent> {
     
     this.raw = raw;
   }
-  
-  parseRelation(event: Event, relType: string) {
-    this._handleRelation(event, relType);
-  }
-  
-  _handleRelation(event: Event, relType: string) {
+    
+  _handleRelation(relation: Relation, toBeginning = false) {
+    const { event, relType } = relation;
+    
     if (relType === "m.replace") {
       if (event.raw.sender !== this.raw.sender) return;
       this._contentCache = null;
@@ -72,15 +73,15 @@ export class Event<RawType extends RawEvent = RawEvent> {
     }
     
     if (event.relationsOut === null) {
-      event.relationsOut = [{ event: this, relType }];
+      event.relationsOut = [{ ...relation, event: this }];
     } else {
-      event.relationsOut.push({ event: this, relType });
+      event.relationsOut[toBeginning ? "unshift" : "push"]({ ...relation, event: this });
     }
     
     if (this.relationsIn === null) {
-      this.relationsIn = [{ event, relType }];
+      this.relationsIn = [relation];
     } else {
-      this.relationsIn.push({ event, relType });
+      this.relationsIn[toBeginning ? "unshift" : "push"](relation);
     }
   }
   
@@ -114,6 +115,10 @@ export class Event<RawType extends RawEvent = RawEvent> {
   isState(): this is StateEvent {
     return typeof this.raw.state_key !== "undefined";
   }
+  
+  // isLocalEcho(): boolean {
+  //   return this.id[0] === "~";
+  // }
   
   async redact(reason?: string) {
     const txn = Math.random().toString(36);

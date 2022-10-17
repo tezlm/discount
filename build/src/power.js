@@ -1,15 +1,23 @@
-"use strict";
-// import type Client from "./client";
-// import type { StateEvent } from "./event";
-// import type { StateEvent } from "./event";
-// export default class PowerLevels {
-//   constructor(
-//     private client: Client,
-//     public event: StateEvent,
-//   ) {}
-//   forUser(id: string) {
-//   forUser(id: string) {
-//   }
-//   static default(): PowerLevels {
-//   }  
-// }
+export default class PowerLevels {
+    room;
+    client = this.room.client;
+    levels;
+    constructor(room) {
+        this.room = room;
+        this.levels = room.getState("m.room.power_levels")?.content ?? {};
+    }
+    get me() { return this.forUser(this.client.userId); }
+    get redact() { return this.levels.redact ?? 50; }
+    get invite() { return this.levels.invite ?? 0; }
+    get ban() { return this.levels.ban ?? 50; }
+    get kick() { return this.levels.kick ?? 50; }
+    forEvent(eventType) {
+        return this.levels.events?.[eventType] ?? this.levels.events_default ?? 0;
+    }
+    forState(eventType) {
+        return this.levels.events?.[eventType] ?? this.levels.state_default ?? 50;
+    }
+    forUser(userId) {
+        return this.levels.users?.[userId] ?? this.levels.users_default ?? 0;
+    }
+}

@@ -29,8 +29,7 @@ export default class Member {
   }
   
   get power(): number {
-    // TODO: power should always be defined in room
-    return (this.room.power as any)?.getUser(this.id) ?? 0;
+    return this.room.power.forUser(this.id);
   }
   
   async ban(reason: string) {

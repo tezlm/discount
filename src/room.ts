@@ -1,7 +1,9 @@
 import type Client from "./client";
 import type { StateEvent } from "./event";
+// import Emitter from "./emitter";
 import Members from "./members";
 import Events from "./events";
+import Power from "./power";
 
 type JoinRule = "invite" | "public" | "knock" | "restricted" | "knock_restricted";
 
@@ -15,7 +17,7 @@ export default class Room {
   public type: string | null = null;
   public members: Members = new Members(this);
   public events: Events = new Events(this);
-  public accountData: Map<string, { type: string, content: any }> = new Map();
+  public accountData: Map<string, any> = new Map();
   public notifications = { unread: 0, highlight: 0 };
   
   constructor(
@@ -48,22 +50,11 @@ export default class Room {
     }
     
     this.state.push(event);
-  }
-  
-  // leave() {}
-  // join() {}
-  // invite(who: User | string) {}
+  }  
 
   get power(): any {  
     if (this._cachePower) return this._cachePower;
-    const power = this.getState("m.room.power_levels")?.content ?? { state_default: 50, users_default: 50 };
-    this._cachePower = {
-      ...power,
-      me: power.users?.[this.client.userId] ?? power.users_default ?? 0,
-      getEvent: (name: string) => power.events?.[name] ?? power.events_default ?? 0,
-      getState: (name: string) => power.state?.[name]  ?? power.state_default  ?? 50,
-      getUser:  (id: string)   => power.users?.[id]    ?? power.users_default  ?? 0,
-    }
+    this._cachePower = new Power(this);
     return this._cachePower;
   }
   
@@ -76,6 +67,12 @@ export default class Room {
   async sendState(type: string, content: any, stateKey = "") {
     await this.client.fetcher.sendState(this.id, type, content, stateKey);
   }
+  
+  async leave() {
+    return this.client.fetcher.leaveRoom(this.id);
+  }
+  
+  // invite(who: User | string) {}
   
   // TEMP: discard parity
   get tombstone() { return this.getState("m.room.tombstone")?.content }
