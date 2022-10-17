@@ -4,7 +4,7 @@ export interface Error {
     errcode: string;
     error: string;
 }
-interface StrippedState {
+export interface StrippedState {
     content: any;
     sender: string;
     state_key: string;
@@ -38,7 +38,9 @@ export interface Sync {
     rooms?: {
         invite?: {
             [id: string]: {
-                invite_state: [StrippedState];
+                invite_state: {
+                    events: [StrippedState];
+                };
             };
         };
         join?: {

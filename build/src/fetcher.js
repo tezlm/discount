@@ -18,24 +18,17 @@ export default class Fetcher {
     }
     async fetchUnauth(path, options) {
         const query = options.query ? stringifyQueryParams(options.query) : "";
-        const fetchOpts = {
+        const res = await fetch(`${this.baseUrl}/_matrix${path}${query}`, {
             method: options.method ?? "GET",
             headers: options.headers,
-        };
-        if (options.body) {
-            if (typeof options.body === "object") {
-                fetchOpts.body = JSON.stringify(options.body);
-            }
-            else {
-                fetchOpts.body = options.body;
-            }
-        }
-        // if (true) {
-        // const color = ({ GET: '4', POST: '2', DELETE: '1', PUT: '3' })[fetchOpts.method as string] ?? '5';
-        // console.log(`\x1b[3${color}m${fetchOpts.method}\x1b[0m ${this.baseUrl}/_matrix${path}${query}`);
-        // }
-        return fetch(`${this.baseUrl}/_matrix${path}${query}`, fetchOpts)
-            .then(res => res.json());
+            signal: options.abort?.signal,
+            ...(options.body && {
+                body: typeof options.body === "object" ? JSON.stringify(options.body) : options.body,
+            }),
+        });
+        if (res.status < 200 || res.status >= 300)
+            throw await res.json();
+        return res.json();
     }
     async fetch(path, options) {
         const fetchOpts = {
@@ -51,9 +44,9 @@ export default class Fetcher {
         return this.fetch(`/media/v3${path}`, options);
     }
     // syncing
-    async sync(since) {
+    async sync(since, abort) {
         const query = { since, filter: this.filter, timeout: "60000" };
-        return this.fetchClient("/sync", { query });
+        return this.fetchClient("/sync", { query, abort });
     }
     async postFilter(userId, filter) {
         const { filter_id } = await this.fetchClient(`/user/${encode(userId)}/filter`, { method: "POST", body: filter });
@@ -75,14 +68,58 @@ export default class Fetcher {
     // async fetchUser(userId: string) {
     // return this.fetchClient(`/profile/${encode(userId)}`, {});
     // }
+    async fetchState(roomId) {
+        return this.fetchClient(`/rooms/${encode(roomId)}/state`, {});
+    }
     // events
     async sendEvent(roomId, type, content, transaction) {
         return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${transaction}`, { method: "PUT", body: content });
     }
     async sendState(roomId, type, content, stateKey = "") {
-        return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${stateKey}`, { method: "PUT", body: content });
+        return await this.fetchClient(`/rooms/${encode(roomId)}/state/${encode(type)}/${stateKey}`, { method: "PUT", body: content });
     }
-    async redact(roomId, eventId, transaction, reason) {
-        return await this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}/${transaction}`, { method: "PUT", body: reason ? { reason } : undefined });
+    // redact events
+    async redactEvent(roomId, eventId, reason) {
+        return await this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}`, { method: "PUT", body: reason ? { reason } : null });
+    }
+    // membership
+    async kickMember(roomId, userId, reason) {
+        return await this.fetchClient(`/rooms/${encode(roomId)}/kick`, {
+            method: "POST",
+            body: {
+                user_id: userId,
+                ...(reason && { reason }),
+            }
+        });
+    }
+    async banMember(roomId, userId, reason) {
+        return await this.fetchClient(`/rooms/${encode(roomId)}/ban`, {
+            method: "POST",
+            body: {
+                user_id: userId,
+                ...(reason && { reason }),
+            }
+        });
+    }
+    async unbanMember(roomId, userId, reason) {
+        return await this.fetchClient(`/rooms/${encode(roomId)}/unban`, {
+            method: "POST",
+            body: {
+                user_id: userId,
+                ...(reason && { reason }),
+            }
+        });
+    }
+    async joinRoom(roomId) {
+        return await this.fetchClient(`/rooms/${encode(roomId)}/join`, {
+            method: "POST",
+            body: {}
+        });
+    }
+    async leaveRoom(roomId) {
+        return await this.fetchClient(`/rooms/${encode(roomId)}/leave`, {
+            method: "POST",
+            body: {}
+        });
     }
 }

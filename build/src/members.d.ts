@@ -9,5 +9,5 @@ export default class Members extends Map<string, Member> {
     constructor(room: Room);
     _handle(event: StateEvent): void;
     fetch(): Promise<any>;
-    with(membership: Membership): any;
+    with(membership: Membership): Array<Member>;
 }

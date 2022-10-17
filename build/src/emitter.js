@@ -1,16 +1,16 @@
 export default class Emitter {
-    listeners = new Map();
+    listeners = new Set();
     on(event, call) {
-        this.listeners.set(call, event);
+        this.listeners.add([call, event]);
         return this;
     }
-    off(call) {
-        this.listeners.delete(call);
+    off(event, call) {
+        this.listeners.delete([call, event]);
         return this;
     }
     once(event, call) {
-        const wrapped = (...params) => { call(...params); this.off(wrapped); };
-        this.listeners.set(wrapped, event);
+        const wrapped = (...params) => { call(...params); this.listeners.delete([wrapped, event]); };
+        this.listeners.add([wrapped, event]);
         return this;
     }
     emit(event, ...params) {

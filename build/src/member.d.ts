@@ -11,5 +11,8 @@ export default class Member {
     constructor(room: Room, event: StateEvent);
     get membership(): Membership;
     get power(): number;
+    ban(reason: string): Promise<void>;
+    kick(reason?: string): Promise<void>;
+    unban(reason: string): Promise<void>;
     get userId(): string;
 }

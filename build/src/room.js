@@ -1,4 +1,6 @@
+// import Emitter from "./emitter";
 import Members from "./members";
+import Events from "./events";
 export default class Room {
     client;
     id;
@@ -8,8 +10,8 @@ export default class Room {
     topic = null;
     avatar = null;
     type = null;
-    joinRule = "invite";
     members = new Members(this);
+    events = new Events(this);
     accountData = new Map();
     notifications = { unread: 0, highlight: 0 };
     constructor(client, id) {
@@ -39,8 +41,8 @@ export default class Room {
                 this.avatar = event.content.url ?? null;
                 break;
             case "m.room.create":
-                this.type = event.content.type === "m.space" ? "space" : "room";
-                break; // TODO: make discard use matrix types rather than space/room stupid idiot design descision by me
+                this.type = event.content.type ?? null;
+                break;
             case "m.room.join_rules":
                 this.joinRule = event.content?.join_rule ?? "invite";
                 break;
@@ -61,7 +63,6 @@ export default class Room {
         this._cachePower = {
             ...power,
             me: power.users?.[this.client.userId] ?? power.users_default ?? 0,
-            getBase: (name) => power[name] ?? power.state_default ?? 50,
             getEvent: (name) => power.events?.[name] ?? power.events_default ?? 0,
             getState: (name) => power.state?.[name] ?? power.state_default ?? 50,
             getUser: (id) => power.users?.[id] ?? power.users_default ?? 0,
@@ -80,4 +81,5 @@ export default class Room {
     get tombstone() { return this.getState("m.room.tombstone")?.content; }
     get roomId() { return this.id; }
     get readEvent() { return this.accountData?.get("m.fully_read")?.event_id ?? null; }
+    joinRule = "invite";
 }

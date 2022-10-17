@@ -1,3 +1,5 @@
+// import User from "./user";
+import { intern } from "./util";
 // export default class Member extends User {
 export default class Member {
     room;
@@ -13,7 +15,7 @@ export default class Member {
             throw "event must have stateKey";
         this.room = room;
         this.event = event;
-        this.id = event.stateKey;
+        this.id = intern(event.stateKey);
         this.name = event.content.displayname;
         this.avatar = event.content.avatar_url;
     }
@@ -24,9 +26,15 @@ export default class Member {
         // TODO: power should always be defined in room
         return this.room.power?.getUser(this.id) ?? 0;
     }
-    // ban(reason: string) {}
-    // kick(reason: string) {}
-    // unban(reason: string) {}
+    async ban(reason) {
+        this.client.fetcher.banMember(this.room.id, this.id, reason);
+    }
+    async kick(reason) {
+        this.client.fetcher.kickMember(this.room.id, this.id, reason);
+    }
+    async unban(reason) {
+        this.client.fetcher.unbanMember(this.room.id, this.id, reason);
+    }
     // TEMP: discard parity
     get userId() { return this.id; }
 }

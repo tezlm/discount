@@ -30,14 +30,16 @@ export default class Fetcher {
   async fetchUnauth(path: string, options: FetchOptions): Promise<any> {
     const query = options.query ? stringifyQueryParams(options.query) : "";
     
-    return fetch(`${this.baseUrl}/_matrix${path}${query}`, {
+    const res = await fetch(`${this.baseUrl}/_matrix${path}${query}`, {
       method: options.method ?? "GET",
       headers: options.headers,
       signal: options.abort?.signal,
       ...(options.body && {
         body: typeof options.body === "object" ? JSON.stringify(options.body) : options.body,
       }),
-    }).then(res => res.json());
+    });
+    if (res.status < 200 || res.status >= 300) throw await res.json();
+    return res.json();
   }
   
   async fetch(path: string, options: FetchOptions): Promise<any> {

@@ -3,7 +3,6 @@ import Fetcher from "./fetcher";
 import type * as api from "./api"
 import Room from "./room";
 import Invite from "./invite";
-import Events from "./events";
 import Timeline from "./timeline";
 import { Event, StateEvent, EphemeralEvent } from "./event.js";
 
@@ -150,11 +149,10 @@ export default class Client extends Emitter implements ClientEvents {
             const event = new Event(room!, raw);
             if (raw.type === "m.room.redaction") {              
               // this.emit("redact", event);
-              // this.emit("event", event);
+              room.events.live?._redact(event);
               this.emit("event", event);
             } else {
-              // room.events.live._add(event);
-              // this.emit("event", event);
+              room.events.live?._add(event);
               this.emit("event", event);
             }
             if (raw.unsigned?.transaction_id) {
