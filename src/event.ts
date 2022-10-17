@@ -39,11 +39,7 @@ export class Event<RawType extends RawEvent = RawEvent> {
   public id: string;
   public type: string;
   public stateKey: string | undefined;
-  
-  // TEMP: discard compat
-  public flags = new Set();
-  public reactions = null; // move to getter?
-  
+    
   constructor(public room: Room, raw: RawType) {
     raw.type = intern(raw.type);
     raw.sender = intern(raw.sender);
@@ -82,6 +78,17 @@ export class Event<RawType extends RawEvent = RawEvent> {
       this.relationsIn = [relation];
     } else {
       this.relationsIn[toBeginning ? "unshift" : "push"](relation);
+    }
+  }
+  
+  _handleUnrelation(rel: Relation) {
+    if (!this.relationsOut) return;
+    for (let i = 0; i < this.relationsOut.length; i++) {
+      if (this.relationsOut[i].event.id === rel.event.id) {
+        this.relationsOut.splice(i--, 1);
+        if (rel.relType === "m.replace") this._contentCache = null;
+        if (rel.relType === "m.annotation") this._reactionsCache = null;
+      }
     }
   }
   
@@ -130,9 +137,26 @@ export class Event<RawType extends RawEvent = RawEvent> {
   // reply(type: string, content: any) {}
   
   // TEMP: discard compat
+  public flags = new Set();
   get eventId(): string { return this.raw.event_id }
   get roomId(): string { return this.room.id }
   get date(): Date { return this.timestamp }
+  
+  private _reactionsCache: Map<string, Array<Event>> | null = null;
+  get reactions() {
+    if (this._reactionsCache) return this._reactionsCache;
+    const reactions: Map<string, Array<Event>> = new Map();
+    for (let i of this.relationsIn ?? []) {
+      if (i.relType !== "m.annotation" || !i.key) continue;
+      if (reactions.has(i.key)) {
+        reactions.get(i.key)!.push(i.event);
+      } else {
+        reactions.set(i.key, [i.event]);
+      }
+    }
+    this._reactionsCache = reactions.size ? reactions : null;
+    return this._reactionsCache;
+  }
 }
 
 export class StateEvent extends Event<RawStateEvent> {
