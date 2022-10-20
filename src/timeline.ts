@@ -55,7 +55,6 @@ export default class Timeline extends Array {
   
   async fetch(direction: "backwards" | "forwards") {
     const res = await this.getFetch(direction);
-    console.log("FETCH", direction, res);
     if (!res) return 0;
     if (direction === "backwards") {
       this.batchPrev = res.end;
@@ -77,7 +76,6 @@ export default class Timeline extends Array {
       added++;
     }
     
-    console.log("FETCHADD", added);
     return added;
   }
 
