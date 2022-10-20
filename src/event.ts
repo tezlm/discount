@@ -92,9 +92,12 @@ export class Event<RawType extends RawEvent = RawEvent> {
     }
   }
   
-  get sender(): Member {
+  get sender(): Member | { id: string } {
     const member = this.room.members.get(this.raw.sender);
-    if (!member) throw "could not find member " + this.raw.sender;
+    if (!member) {
+      console.warn("could not find member " + this.raw.sender);
+      return { id: this.raw.sender };
+    }
     return member;
   }
   
