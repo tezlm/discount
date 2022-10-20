@@ -66,6 +66,8 @@ export class Event<RawType extends RawEvent = RawEvent> {
       if (event.raw.sender !== this.raw.sender) return;
       this._contentCache = null;
       this.flags.add("edited");
+    } else if (relType === "m.annotation") {
+      this._reactionsCache = null;
     }
     
     if (event.relationsOut === null) {
@@ -82,12 +84,13 @@ export class Event<RawType extends RawEvent = RawEvent> {
   }
   
   _handleUnrelation(rel: Relation) {
-    if (!this.relationsOut) return;
-    for (let i = 0; i < this.relationsOut.length; i++) {
-      if (this.relationsOut[i].event.id === rel.event.id) {
-        this.relationsOut.splice(i--, 1);
-        if (rel.relType === "m.replace") this._contentCache = null;
-        if (rel.relType === "m.annotation") this._reactionsCache = null;
+    if (!this.relationsIn) return;
+    const { relType } = rel;
+    for (let i = 0; i < this.relationsIn.length; i++) {
+      if (this.relationsIn[i].event.id === rel.event.id) {
+        this.relationsIn.splice(i--, 1);
+        if (relType === "m.replace") this._contentCache = null;
+        if (relType === "m.annotation") this._reactionsCache = null;
       }
     }
   }
