@@ -1,5 +1,5 @@
 import type Room from "./room";
-// import type { RawStateEvent } from "./api";
+import type * as api from "./api";
 import { Event, StateEvent } from "./event";
 
 function getRelations(event: Event): Array<{ relType: string, eventId: string, key?: string, fallback: boolean }> {
@@ -27,6 +27,8 @@ function getRelations(event: Event): Array<{ relType: string, eventId: string, k
 export default class Timeline extends Array {
   public client = this.room.client;
   private events = this.room.events;
+  private _forwardsProm: Promise<api.Messages> | null = null;
+  private _backwardsProm: Promise<api.Messages> | null = null;
   
   constructor(
     public room: Room,
@@ -35,28 +37,47 @@ export default class Timeline extends Array {
   ) {
     super();
   }
-    
-  async fetch(direction: "backwards" | "forwards") {
-    let res;
+  
+  private getFetch(direction: "backwards" | "forwards"): Promise<api.Messages> | null {
+    const limit = this.length < 20 ? 20 : 200;
     if (direction === "backwards") {
-      if (!this.batchPrev) return 0;
-      res = await this.client.fetcher.fetchMessages(this.room.id, this.batchPrev, "b");
-      this.batchNext = res.end;
+      if (this._backwardsProm) return this._backwardsProm;
+      if (!this.batchPrev) return null;
+      this._backwardsProm = this.client.fetcher.fetchMessages(this.room.id, this.batchPrev, "b", limit);
+      return this._backwardsProm;
     } else {
-      if (!this.batchNext) return 0;
-      res = await this.client.fetcher.fetchMessages(this.room.id, this.batchNext, "f");
-      this.batchPrev = res.end;
+      if (this._forwardsProm) return this._forwardsProm;
+      if (!this.batchNext) return null;
+      this._forwardsProm = this.client.fetcher.fetchMessages(this.room.id, this.batchNext, "f", limit);
+      return this._forwardsProm;
     }
-    for (let raw of res.state) {
+  }
+  
+  async fetch(direction: "backwards" | "forwards") {
+    const res = await this.getFetch(direction);
+    console.log("FETCH", direction, res);
+    if (!res) return 0;
+    if (direction === "backwards") {
+      this.batchPrev = res.end;
+      this._backwardsProm = null;
+    } else {
+      this.batchNext = res.end;
+      this._forwardsProm = null;
+    }
+    
+    for (let raw of res.state ?? []) {
       this.room.handleState(new StateEvent(this.room, raw));
     }
+    
     let added = 0;
-    for (let raw of res.chunk) {
+    for (let raw of res.chunk ?? []) {
       if (raw.unsigned?.redacted_because) continue;
       if (raw.type === "m.room.redaction") continue;
       this._add(new Event(this.room, raw), direction === "backwards");
       added++;
     }
+    
+    console.log("FETCHADD", added);
     return added;
   }
 

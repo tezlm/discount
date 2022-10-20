@@ -70,8 +70,8 @@ export default class Fetcher {
   }
   
   // content
-  async fetchMessages(roomId: string, from: string, direction: "b" | "f"): Promise<api.Messages> {
-    return this.fetchClient(`/rooms/${encode(roomId)}/messages?from=${encode(from)}&dir=${direction}&limit=200`, {});
+  async fetchMessages(roomId: string, from: string, direction: "b" | "f", limit = 200): Promise<api.Messages> {
+    return this.fetchClient(`/rooms/${encode(roomId)}/messages?from=${encode(from)}&dir=${direction}&limit=${limit}`, {});
   }
 
   // async fetchContext(roomId: string, eventId: string) {
