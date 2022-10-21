@@ -219,6 +219,9 @@ export default class Client extends Emitter implements ClientEvents {
           state: { lazy_load_members: true },
           timeline: { limit: 0 },
         },
+        presence: {
+          types: [],
+        },
       });
       this.fetcher.filter = filterId;
     }

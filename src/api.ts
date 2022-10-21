@@ -19,75 +19,75 @@ export interface AccountData {
 }
 
 interface Timeline {
-  events: [RawEvent],
+  events: Array<RawEvent>,
   limited: boolean,
   prev_batch: string,
 }
 
 export interface Sync {
-  account_data?: { events: [AccountData] },
-  device_lists?: { changed: [string], left: [string] },
+  account_data?: { events: Array<AccountData> },
+  device_lists?: { changed: Array<string>, left: Array<string> },
   device_one_time_keys_count?: { [algorithm: string]: number },
-  device_unused_fallback_key_types?: [string],
+  device_unused_fallback_key_types?: Array<string>,
   next_batch: string,
-  presence?: { events: [RawEvent] },
+  presence?: { events: Array<RawEvent> },
   rooms?: {
     invite?: {
-      [id: string]: { invite_state: { events: [StrippedState] } },
+      [id: string]: { invite_state: { events: Array<StrippedState> } },
     },
     join?: {
       [id: string]: {
-        account_data?: { events: [AccountData] },
-        ephemeral?: { events: [RawEvent] },
-        state?: { events: [RawStateEvent] },
-        summary?: { "m.heroes": [string], "m.invited_member_count": number, "m.joined_member_count": number },
+        account_data?: { events: Array<AccountData> },
+        ephemeral?: { events: Array<RawEvent> },
+        state?: { events: Array<RawStateEvent> },
+        summary?: { "m.heroes": Array<string>, "m.invited_member_count": number, "m.joined_member_count": number },
         timeline?: Timeline,
         unread_notifications?: { highlight_count: number, notification_count: number },
       },
     },
     knock?: {
-      [id: string]: { knock_state: [StrippedState] },
+      [id: string]: { knock_state: Array<StrippedState> },
     },
     leave?: {
       [id: string]: {
-        account_data?: [AccountData],
-        state?: { events: [RawStateEvent] },
+        account_data?: Array<AccountData>,
+        state?: { events: Array<RawStateEvent> },
         timeline?: Timeline,
       },
     },
   },
-  to_device?: { events: [{ content: any, sender: string, type: string}] },
+  to_device?: { events: Array<{ content: any, sender: string, type: string}> },
 }
 
 interface EventFilter {
   limit?: number,
-  not_senders?: [string],
-  not_types?: [string],
-  senders?: [string],
-  types?: [string],
+  not_senders?: Array<string>,
+  not_types?: Array<string>,
+  senders?: Array<string>,
+  types?: Array<string>,
 }
 
 interface RoomEventFilter extends EventFilter {
   contains_url?: boolean,
   include_redundant_members?: boolean,
   lazy_load_members?: boolean,
-  not_rooms?: [string],
-  rooms?: [string],
+  not_rooms?: Array<string>,
+  rooms?: Array<string>,
 }
 
 interface RoomFilter {
   account_data?: RoomEventFilter,
   ephermeral?: RoomEventFilter,
   include_leave?: boolean,
-  rooms?: [string],
-  not_rooms?: [string],
+  rooms?: Array<string>,
+  not_rooms?: Array<string>,
   state?: RoomEventFilter,
   timeline?: RoomEventFilter,
 }
 
 export interface Filter {
   account_data?: EventFilter,
-  event_fields?: [string],
+  event_fields?: Array<string>,
   event_format?: "client" | "federation",
   presence?: EventFilter,
   room?: RoomFilter,
