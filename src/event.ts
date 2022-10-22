@@ -7,7 +7,7 @@ export interface RawEvent {
   type: string,
   sender: string,
   content: any,
-  unsigned: any,
+  unsigned?: any,
   origin_server_ts: number,
   state_key?: string,
   redacts?: string,
@@ -22,11 +22,29 @@ export interface RawEphemeralEvent {
   type: string,
 }
 
+export interface RawLocalEvent {
+  type: string,
+  content: any,
+}
+
 export interface Relation {
   event: Event,
   relType: string,
   key?: string,
   fallback: boolean,
+}
+
+function useLessMemory(raw: RawEvent) {
+  raw.type = intern(raw.type);
+  raw.sender = intern(raw.sender);
+  raw.event_id = intern(raw.event_id);
+  if (raw.state_key) raw.state_key = intern(raw.state_key);
+  if (raw.type === "m.room.membership") {
+    const content = raw.content;
+    content.displayname && (content.displayname = intern(content.displayname));
+    content.avatar_url && (content.avatar_url = intern(content.avatar_url));
+    content.membership && (content.membership = intern(content.membership ));
+  }
 }
 
 export class Event<RawType extends RawEvent = RawEvent> {  
@@ -39,24 +57,14 @@ export class Event<RawType extends RawEvent = RawEvent> {
   public id: string;
   public type: string;
   public stateKey: string | undefined;
-    
+  
   constructor(public room: Room, raw: RawType) {
-    raw.type = intern(raw.type);
-    raw.sender = intern(raw.sender);
-    raw.event_id = intern(raw.event_id);
-    if (raw.state_key) raw.state_key = intern(raw.state_key);
-    if (raw.type === "m.room.membership") {
-      const content = raw.content;
-      content.displayname && (content.displayname = intern(content.displayname));
-      content.avatar_url && (content.avatar_url = intern(content.avatar_url));
-      content.membership && (content.membership = intern(content.membership ));
-    }
-    
-    this.id = intern(raw.event_id);
-    this.type = intern(raw.type);
-    if (raw.state_key) this.stateKey = intern(raw.state_key);
-    
+    useLessMemory(raw);
     this.raw = raw;
+    
+    this.id = raw.event_id;
+    this.type = raw.type;
+    this.stateKey = raw.state_key;
   }
     
   _handleRelation(relation: Relation, toBeginning = false) {
@@ -189,4 +197,24 @@ export class EphemeralEvent {
   get content(): any {
     return this.raw.content;
   }  
+}
+
+export class LocalEvent extends Event {
+  public status: "sending" | "errored" = "sending";
+  
+  constructor(room: Room, raw: RawLocalEvent) {
+    super(room, {
+      event_id: "transactionid",
+      sender: room.client.userId,
+      origin_server_ts: Date.now(),
+      ...raw,
+    });
+  }
+  
+  upgrade(raw: RawEvent) {
+    useLessMemory(raw);
+    this.raw = raw;
+    this.id = raw.event_id;
+    this.stateKey = raw.state_key;
+  }
 }
