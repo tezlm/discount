@@ -1,0 +1,2 @@
+todo: reimplement testing
+idea: download conduit and test against that

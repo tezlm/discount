@@ -1,3 +1,6 @@
+// FIXME: this can leak memory by assigning listeners without unassigning later
+// possibly look into WeakRef, WeakMap, or FinalizationRegistry to prevent this?
+
 export default class Emitter {
   private listeners = new Set<[Function, string]>();
 	
