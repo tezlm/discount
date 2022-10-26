@@ -70,6 +70,10 @@ export default class Fetcher {
   }
   
   // content
+  async fetchUser(userId: string): Promise<api.UserData> {
+    return this.fetch(`/profile/${encode(userId)}`, {});
+  }
+  
   async fetchMessages(roomId: string, from: string, direction: "b" | "f", limit = 200): Promise<api.Messages> {
     return this.fetchClient(`/rooms/${encode(roomId)}/messages?from=${encode(from)}&dir=${direction}&limit=${limit}`, {});
   }

@@ -93,6 +93,12 @@ export interface Filter {
   room?: RoomFilter,
 }
 
+export interface UserData {
+  name: string,
+  avatar: string,
+  [key: string]: any,
+}
+
 export interface Messages {
   start: string,
   end: string,

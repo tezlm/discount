@@ -32,6 +32,10 @@ export default class Member {
     return this.room.power.forUser(this.id);
   }
   
+  async setPower(power: number) {
+    return this.room.power.patch({ users: { [this.id]: power }});
+  }
+  
   async ban(reason: string) {
     this.client.fetcher.banMember(this.room.id, this.id, reason);
   }

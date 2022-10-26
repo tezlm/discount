@@ -2,23 +2,42 @@ import type Client from "./client";
 import type Room from "./room";
 
 interface RawPowerLevels {
-  redact: number,
-  invite: number,
-  kick: number,
-  ban: number,
-  events_default: number,
-  state_default: number,
-  users_default: number,
-  events: { [eventType: string]: number },
-  users:  { [userId: string]: number },
+  redact?: number,
+  invite?: number,
+  kick?: number,
+  ban?: number,
+  events_default?: number,
+  state_default?: number,
+  users_default?: number,
+  events?: { [eventType: string]: number },
+  users?:  { [userId: string]: number },
+}
+
+function merge(obj1: any, obj2: any): any {
+  const merged: any = { ...obj1, ...obj2 };
+  for (let key in merged) {
+    if (typeof merged[key] === "object" && merged[key]) {
+      merged[key] = merge(obj1[key], obj2[key]);
+    }
+  }
+  return merged;
 }
 
 export default class PowerLevels {
   public client: Client = this.room.client;
-  public levels: Partial<RawPowerLevels>;
+  public levels: RawPowerLevels;
   
   constructor(public room: Room) {
-    this.levels = room.getState("m.room.power_levels")?.content ?? { state_default: 50, users_default: 50 };
+    this.levels = room.getState("m.room.power_levels")?.content ?? this._getDefault();
+  }
+  
+  _getDefault() {
+    const creator = this.room.getState("m.room.create")?.raw.sender as string;
+    return { state_default: 0, events_default: 0, users: { [creator]: 100 } };
+  }
+  
+  _setLevels(levels: RawPowerLevels) {
+    this.levels = levels ?? this._getDefault();
   }
   
   get me(): number { return this.forUser(this.client.userId) }
@@ -42,5 +61,13 @@ export default class PowerLevels {
   
   forUser(userId: string): number {
     return this.levels.users?.[userId] ?? this.usersDefault;
+  }
+  
+  async put(levels: RawPowerLevels) {
+    return this.room.sendState("m.room.power_levels", levels);
+  }
+  
+  async patch(levels: RawPowerLevels) {
+    return this.room.sendState("m.room.power_levels", merge(this.levels, levels));
   }
 }
