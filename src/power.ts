@@ -25,10 +25,21 @@ function merge(obj1: any, obj2: any): any {
 
 export default class PowerLevels {
   public client: Client = this.room.client;
-  public levels: RawPowerLevels;
+  public levels: RawPowerLevels = {};
+  
+  public me: number = 0;
+  
+  public usersDefault:  number = 0;
+  public eventsDefault: number = 50;
+  public stateDefault:  number = 50;
+  
+  public redact: number = 50;
+  public invite: number = 0;
+  public ban:    number = 50;
+  public kick:   number = 50;
   
   constructor(public room: Room) {
-    this.levels = room.getState("m.room.power_levels")?.content ?? this._getDefault();
+    this._setLevels(room.getState("m.room.power_levels")?.content);
   }
   
   _getDefault() {
@@ -38,18 +49,18 @@ export default class PowerLevels {
   
   _setLevels(levels: RawPowerLevels) {
     this.levels = levels ?? this._getDefault();
+    
+    this.me = this.forUser(this.client.userId);
+  
+    this.usersDefault = this.levels.users_default ?? 0;
+    this.eventsDefault = this.levels.events_default ?? 0;
+    this.stateDefault = this.levels.state_default ?? 50;
+  
+    this.redact = this.levels.redact ?? 50;
+    this.invite = this.levels.invite ?? 0;
+    this.ban = this.levels.ban ?? 50;
+    this.kick = this.levels.kick ?? 50;
   }
-  
-  get me(): number { return this.forUser(this.client.userId) }
-  
-  get usersDefault():  number { return this.levels.users_default ?? 0 }
-  get eventsDefault(): number { return this.levels.events_default ?? 0 }
-  get stateDefault():  number { return this.levels.state_default ?? 50 }
-  
-  get redact(): number { return this.levels.redact ?? 50 }
-  get invite(): number { return this.levels.invite ?? 0 }
-  get ban():    number { return this.levels.ban ?? 50 }
-  get kick():   number { return this.levels.kick ?? 50 }
   
   forEvent(eventType: string): number {
     return this.levels.events?.[eventType] ?? this.eventsDefault;
