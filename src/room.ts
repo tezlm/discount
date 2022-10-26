@@ -9,12 +9,12 @@ type JoinRule = "invite" | "public" | "knock" | "restricted" | "knock_restricted
 
 export default class Room {
   private state: Array<StateEvent> = [];
-  private _cachePower: object | null = null;
   
   public name: string | null = null;
   public topic: string | null = null;
   public avatar: string | null = null;
   public type: string | null = null;
+  public power: Power = new Power(this);
   public members: Members = new Members(this);
   public events: Events = new Events(this);
   public accountData: Map<string, any> = new Map();
@@ -45,18 +45,12 @@ export default class Room {
       case "m.room.avatar":       this.avatar = event.content.url  ?? null; break;
       case "m.room.create":       this.type = event.content.type   ?? null; break;
       case "m.room.join_rules":   this.joinRule = event.content?.join_rule ?? "invite"; break;
-      case "m.room.power_levels": this._cachePower = null; break;
+      case "m.room.power_levels": this.power._setLevels(event.content); break;
       case "m.room.member":       this.members._handle(event);
     }
     
     this.state.push(event);
   }  
-
-  get power(): any {  
-    if (this._cachePower) return this._cachePower;
-    this._cachePower = new Power(this);
-    return this._cachePower;
-  }
   
   async sendEvent(type: string, content: any) {
     const txn = Math.random().toString(36);

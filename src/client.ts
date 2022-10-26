@@ -1,6 +1,8 @@
 import Emitter from "./emitter";
 import Fetcher from "./fetcher";
-import type * as api from "./api"
+import type * as api from "./api";
+
+import Users from "./users";
 import Room from "./room";
 import Invite from "./invite";
 import Timeline from "./timeline";
@@ -44,6 +46,7 @@ export default class Client extends Emitter implements ClientEvents {
   public status: ClientStatus = "stopped";
   public fetcher: Fetcher;
   public userId: string;
+  public users = new Users(this);
   public rooms = new Map<string, Room>();
   public invites = new Map<string, Invite>();
   public accountData = new Map<string, any>();
@@ -232,4 +235,14 @@ export default class Client extends Emitter implements ClientEvents {
     this.abort.abort();
     this.setStatus("stopped");
   }
+  
+  // public async searchRooms(searchTerm: string, options?: { server?: string, limit?: number }) {
+  //   return new Paginatable extends Array();
+  //   p.next(): Paginatable,
+  //   p.prev(): Paginatable,
+  // }
+  
+  // public async searchUsers(searchTerm: string, options?: { limit?: number }): Promise<[]> {
+    
+  // }
 }
