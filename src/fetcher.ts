@@ -108,8 +108,8 @@ export default class Fetcher {
   }
   
   // redact events
-  async redactEvent(roomId: string, eventId: string, reason?: string): Promise<object> {
-    return await this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}`, { method: "PUT", body: reason ? { reason } : null });
+  async redactEvent(roomId: string, eventId: string, txnId: string, reason?: string): Promise<object> {
+    return await this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}/${encode(txnId)}`, { method: "PUT", body: reason ? { reason } : null });
   }
   
   // membership

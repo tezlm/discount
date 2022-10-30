@@ -143,7 +143,7 @@ export class Event<RawType extends RawEvent = RawEvent> {
   
   async redact(reason?: string) {
     const txn = Math.random().toString(36);
-    this.client.fetcher.redactEvent(this.room.id, this.id, reason);
+    this.client.fetcher.redactEvent(this.room.id, this.id, txn, reason);
     return await this.client.transaction(txn);
   }
   
