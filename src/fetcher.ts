@@ -59,8 +59,8 @@ export default class Fetcher {
   }
   
   // syncing
-  async sync(since?: string, abort?: AbortController): Promise<api.Sync> {
-    const query = { since, filter: this.filter, timeout: "60000" };
+  async sync(since?: string, abort?: AbortController, timeout?: number): Promise<api.Sync> {
+    const query = { since, filter: this.filter, timeout: timeout?.toString() ?? "60000" };
     return this.fetchClient("/sync", { query, abort });
   }
   
