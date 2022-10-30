@@ -6,12 +6,28 @@ import Users from "./users";
 import Room from "./room";
 import Invite from "./invite";
 import Timeline from "./timeline";
-import { Event, StateEvent, EphemeralEvent } from "./event.js";
+import { Event, StateEvent, EphemeralEvent } from "./event";
+
+import Persister, { MemoryPersister } from "./persist";
+
+interface StatePersist {
+  accountData: { type: string, value: any },
+  room: {
+    roomId: string,
+    state: Array<api.RawStateEvent>,
+    accountData: Array<{ type: string, value: any }>,
+    notifications: { unread: 0, highlight: 0 },
+    // timeline: Array<api.RawEvent>
+  },
+  // user: { id: string, data: api.UserData },
+  batchToken: string,
+}
 
 export interface ClientConfig {
   token: string,
   baseUrl: string,
   userId: string,
+  persister?: Persister<StatePersist>,
 }
 
 export type ClientStatus = "stopped" | "starting" | "syncing" | "reconnecting";
@@ -52,11 +68,13 @@ export default class Client extends Emitter implements ClientEvents {
   public accountData = new Map<string, any>();
   private transactions = new Map<string, Function>();
   private abort = new AbortController();
+  private persister: Persister<StatePersist> = new MemoryPersister();
   
   constructor(config: ClientConfig) {
     super();
     this.userId = config.userId;
     this.fetcher = new Fetcher(config.token, config.baseUrl);
+    if (config.persister) this.persister = config.persister;
   }
   
   private setStatus(status: ClientStatus) {
@@ -66,20 +84,23 @@ export default class Client extends Emitter implements ClientEvents {
   
   private async handleError(error: any, since? : string) {
     if (error.errcode) throw new Error(error);
-    if (error.name === "AbortError") return;
+    if (error.name === "AbortError") return this.setStatus("stopped");
     
-    let timeout = 1000;
+    this.setStatus("reconnecting");
+    
     while(true) {
       try {
-        const sync = await this.fetcher.sync(since, this.abort);
+        const sync = await this.fetcher.sync(since, this.abort, 1);
         if (!sync) continue;
         this.handleSync(sync);
+        this.setStatus("syncing");
+        this.sync(sync.next_batch);
         break;
       } catch(err) {
         if (error.errcode) throw new Error(error);
-        if (error.name === "AbortError") return;
+        if (error.name === "AbortError") return this.setStatus("stopped");
         
-        await new Promise(res => setTimeout(res, timeout *= 2));
+        await new Promise(res => setTimeout(res, 1000));
       }
     }
   }
@@ -93,8 +114,6 @@ export default class Client extends Emitter implements ClientEvents {
     if (this.status === "starting") {
       this.setStatus("syncing");
       this.emit("ready");
-    } else if (this.status === "reconnecting") {
-      this.setStatus("syncing");
     }
     
     this.sync(sync.next_batch);
@@ -122,6 +141,7 @@ export default class Client extends Emitter implements ClientEvents {
             }
           } else {
             const room = new Room(this, id);
+            // TODO: handle next_batch
             const timeline = new Timeline(room, data.timeline?.prev_batch ?? null, null);
             room.events.live = timeline;
 
@@ -200,6 +220,7 @@ export default class Client extends Emitter implements ClientEvents {
           this.emit("leave", room);
         }
         if (this.invites.has(id)) {
+          // TODO: merge with normal `leave` and make Invites Rooms
           const invite = this.invites.get(id);
           this.invites.delete(id);
           this.emit("leave-invite", invite);
@@ -216,6 +237,7 @@ export default class Client extends Emitter implements ClientEvents {
   
   public async start() {
     this.setStatus("starting");
+    await this.persister.open("persister", ["accountData"], 1);
     if (!this.fetcher.filter) {
       const filterId = await this.fetcher.postFilter(this.userId, {
         room: {

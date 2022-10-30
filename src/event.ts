@@ -116,6 +116,7 @@ export class Event<RawType extends RawEvent = RawEvent> {
   get content(): any {
     if (this._contentCache) return this._contentCache;
     
+    // @ts-ignore
     const edit = this.relationsIn?.findLast(i => i.relType === "m.replace");   
     const content = edit
       ? { ...edit.event.content["m.new_content"], "m.relates_to": this.raw.content["m.relates_to"] }
@@ -178,7 +179,7 @@ export class StateEvent extends Event<RawStateEvent> {
   
   constructor(room: Room, raw: RawStateEvent) {
     super(room, raw);
-    this.stateKey = intern(raw.state_key);
+    this.stateKey = raw.state_key;
   }
 }
 
