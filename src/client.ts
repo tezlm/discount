@@ -52,7 +52,6 @@ interface ClientEvents {
   // maybe have a base room -> joined room/invited room/left room?
   
   // misc
-  // on(event: "accountData", listener: (events: [api.AccountData], room: Room | null) => any): this,
   on(event: "accountData", listener: (event: api.AccountData) => any): this,
   on(event: "roomAccountData", listener: (event: api.AccountData, room: Room) => any): this,
   on(event: "notifications", listener: (events: { unread: number, highlight: number }, room: Room) => any): this,
