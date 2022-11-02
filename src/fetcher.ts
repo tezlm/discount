@@ -94,10 +94,16 @@ export default class Fetcher {
     // return this.fetchClient(`/profile/${encode(userId)}`, {});
   // }
   
-  async fetchState(roomId: string): Promise<Array<api.RawStateEvent>> {
-    return this.fetchClient(`/rooms/${encode(roomId)}/state`, {});
+  async fetchState(roomId: string): Promise<Array<api.RawStateEvent>>;
+  async fetchState(roomId: string, type?: string, stateKey?: string): Promise<api.RawStateEvent>;
+  async fetchState(roomId: string, type?: string, stateKey = ""): Promise<api.RawStateEvent | Array<api.RawStateEvent>> {
+    if (type) {
+      return this.fetchClient(`/rooms/${encode(roomId)}/state/${type}/${stateKey}`, {});
+    } else {
+      return this.fetchClient(`/rooms/${encode(roomId)}/state`, {});
+    }
   }
-  
+    
   // events
   async sendEvent(roomId: string, type: string, content: any, transaction: string): Promise<{ event_id: string }> {
     return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${transaction}`, { method: "PUT", body: content });
