@@ -50,7 +50,7 @@ export default class Members extends Map<string, Member> {
     if (this.sortCache.has(membership)) return this.sortCache.get(membership);
     const members = [...this.values()]
         .filter(i => i.membership === membership)
-        .sort((a, b) => (b.power - a.power) || (a.name < b.name ? 1 : -1));
+        .sort((a, b) => (b.power - a.power) || (a.name > b.name ? 1 : a.name < b.name ? -1 : 0));
     this.sortCache.set(membership, members);
     return members;
   }
