@@ -6,7 +6,7 @@ import Users from "./users";
 import Room from "./room";
 import Invite from "./invite";
 import Timeline from "./timeline";
-import { Event, StateEvent, EphemeralEvent } from "./event";
+import { Event, StateEvent, EphemeralEvent, LocalEvent } from "./event";
 
 import Persister, { MemoryPersister } from "./persist";
 
@@ -52,6 +52,7 @@ interface ClientEvents {
   // maybe have a base room -> joined room/invited room/left room?
   
   // misc
+  on(event: "remoteEcho", listener: (echo: LocalEvent, txnId: string) => any): this,
   on(event: "accountData", listener: (event: api.AccountData) => any): this,
   on(event: "roomAccountData", listener: (event: api.AccountData, room: Room) => any): this,
   on(event: "notifications", listener: (events: { unread: number, highlight: number }, room: Room) => any): this,
@@ -65,7 +66,7 @@ export default class Client extends Emitter implements ClientEvents {
   public rooms = new Map<string, Room>();
   public invites = new Map<string, Invite>();
   public accountData = new Map<string, any>();
-  private transactions = new Map<string, Function>();
+  public _transactions = new Map<string, LocalEvent>();
   private abort = new AbortController();
   private persister: Persister<StatePersist> = new MemoryPersister();
   
@@ -163,23 +164,27 @@ export default class Client extends Emitter implements ClientEvents {
         const room = this.rooms.get(id);
         if (!room) return;
         
-        // if (data.timeline && this.status !== "starting") {
         if (data.timeline) {
           if (!room) throw "how did we get here?";
           for (let raw of data.timeline.events) {
-            const event = new Event(room!, raw);
-            if (raw.type === "m.room.redaction") {              
-              // this.emit("redact", event);
-              room.events.live?._redact(event);
-              this.emit("event", event);
+            const txnId = raw.unsigned?.transaction_id;
+            const txn = this._transactions.get(txnId);
+            if (txn) {
+              txn.upgrade(raw);
+              txn.flags.delete("sending");
+              txn.room.events.delete(txnId);
+              txn.room.events.set(txn.id, txn);
+              this._transactions.delete(txnId);
+              this.emit("remoteEcho", txn, txnId);
             } else {
-              room.events.live?._add(event);
-              this.emit("event", event);
-            }
-            if (raw.unsigned?.transaction_id) {
-              const txn = raw.unsigned.transaction_id;
-              this.transactions.get(txn)?.(event);
-              this.transactions.delete(txn);
+              const event = new Event(room!, raw);
+              if (raw.type === "m.room.redaction") {
+                room.events.live?._redact(event);
+                this.emit("redact", event);
+              } else {
+                room.events.live?._add(event);
+                this.emit("event", event);
+              }
             }
           }
         }
@@ -226,12 +231,6 @@ export default class Client extends Emitter implements ClientEvents {
         }
       }
     }
-  }
-  
-  public async transaction(id: string): Promise<Event | StateEvent> {
-    return new Promise((res) => {
-      this.transactions.set(id, res);
-    });
   }
   
   public async start() {

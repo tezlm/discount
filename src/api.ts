@@ -102,6 +102,15 @@ export interface UserData {
 export interface Messages {
   start: string,
   end: string,
-  chunk: Array<RawEvent>
-  state: Array<RawStateEvent>
+  chunk: Array<RawEvent>,
+  state: Array<RawStateEvent>,
+}
+
+export interface Context {
+  start: string,
+  end: string,
+  event: RawEvent,
+  events_before: Array<RawEvent>,
+  events_after: Array<RawEvent>,
+  state: Array<RawStateEvent>,
 }
