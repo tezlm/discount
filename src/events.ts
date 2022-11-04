@@ -21,6 +21,8 @@ export default class Events extends Map<string, Event> {
   
   async fetchTimeline(eventId?: string): Promise<Timeline> {
     if (eventId) {
+      // const context = await this.client.fetcher.fetchContext(this.room.id, eventId, 50);
+      // console.log(context);
       throw "unimplemented! cannot fetch timeline for context";
     } else {
       if (this.live) return this.live;

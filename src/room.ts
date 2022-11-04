@@ -1,5 +1,5 @@
 import type Client from "./client";
-import type { StateEvent } from "./event";
+import { StateEvent, LocalEvent } from "./event";
 // import Emitter from "./emitter";
 import Members from "./members";
 import Events from "./events";
@@ -52,10 +52,14 @@ export default class Room {
     this.state.push(event);
   }  
   
-  async sendEvent(type: string, content: any) {
-    const txn = Math.random().toString(36);
-    this.client.fetcher.sendEvent(this.id, type, content, txn);
-    return await this.client.transaction(txn);
+  async sendEvent(type: string, content: any, txnId = "~" + Math.random().toString(36)) {
+    const ev = new LocalEvent(this, { type, content }, txnId);
+    ev.flags.add("sending");
+    this.events.live?._add(ev);
+    this.client.emit("event", ev);
+    this.client._transactions.set(txnId, ev);
+    await this.client.fetcher.sendEvent(this.id, type, content, txnId);
+    return ev;
   }
   
   async sendState(type: string, content: any, stateKey = "") {

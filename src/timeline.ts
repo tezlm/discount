@@ -103,8 +103,6 @@ export default class Timeline extends Array {
         event._handleRelation(rel);
       }
     }
-    
-    // TODO: transaction/local echo events
 
     // TEMP: discard doesn't like having m.reaction events in the timeline
     this.events.set(event.id, event);

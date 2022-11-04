@@ -25,6 +25,8 @@ export interface RawEphemeralEvent {
 export interface RawLocalEvent {
   type: string,
   content: any,
+  state_key?: any,
+  redacts?: string,
 }
 
 export interface Relation {
@@ -138,21 +140,29 @@ export class Event<RawType extends RawEvent = RawEvent> {
     return typeof this.raw.state_key !== "undefined";
   }
   
+  isLocal(): this is LocalEvent {
+    return false;
+  }
+  
   // isLocalEcho(): boolean {
   //   return this.id[0] === "~";
   // }
   
-  async redact(reason?: string) {
-    const txn = Math.random().toString(36);
-    this.client.fetcher.redactEvent(this.room.id, this.id, txn, reason);
-    return await this.client.transaction(txn);
+  async redact(reason?: string, txnId = "~" + Math.random().toString(36)) {
+    const ev = new LocalEvent(this.room, { type: "m.room.redaction", content: { redacts: this.id }, redacts: this.id }, txnId);
+    ev.flags.add("sending");
+    this.room.events.live?._redact(ev);
+    this.client.emit("redact", ev);
+    this.client._transactions.set(txnId, ev);
+    await this.client.fetcher.redactEvent(this.room.id, this.id, txnId, reason);
+    return ev;
   }
   
   // edit(content: any) {}
   // reply(type: string, content: any) {}
   
   // TEMP: discard compat
-  public flags = new Set();
+  public flags = new Set<string>();
   get eventId(): string { return this.raw.event_id }
   get roomId(): string { return this.room.id }
   get date(): Date { return this.timestamp }
@@ -201,11 +211,11 @@ export class EphemeralEvent {
 }
 
 export class LocalEvent extends Event {
-  public status: "sending" | "errored" = "sending";
+  public status: "sending" | "errored" | "sent" = "sending";
   
-  constructor(room: Room, raw: RawLocalEvent) {
+  constructor(room: Room, raw: RawLocalEvent, txnId: string) {
     super(room, {
-      event_id: "transactionid",
+      event_id: txnId,
       sender: room.client.userId,
       origin_server_ts: Date.now(),
       ...raw,
@@ -217,5 +227,9 @@ export class LocalEvent extends Event {
     this.raw = raw;
     this.id = raw.event_id;
     this.stateKey = raw.state_key;
+  }
+  
+  isLocal(): this is LocalEvent {
+    return this.status !== "sent";
   }
 }

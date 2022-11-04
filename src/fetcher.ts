@@ -78,9 +78,10 @@ export default class Fetcher {
     return this.fetchClient(`/rooms/${encode(roomId)}/messages?from=${encode(from)}&dir=${direction}&limit=${limit}`, {});
   }
 
-  // async fetchContext(roomId: string, eventId: string) {
-    // return this.fetchClient(`/rooms/${encode(roomId)}/context/${encode(eventId)}?limit=200`, {});
-  // }
+  async fetchContext(roomId: string, eventId: string, limit = 200): Promise<api.Context> {
+    // it just feels wrong to dump json into the url path
+    return this.fetchClient(`/rooms/${encode(roomId)}/context/${encode(eventId)}?filter={"lazy_load_members":true}&limit=${limit}`, {});
+  }
   
   async fetchEvent(roomId: string, eventId: string): Promise<api.RawEvent> {
     return this.fetchClient(`/rooms/${encode(roomId)}/event/${encode(eventId)}`, {});
@@ -105,8 +106,8 @@ export default class Fetcher {
   }
     
   // events
-  async sendEvent(roomId: string, type: string, content: any, transaction: string): Promise<{ event_id: string }> {
-    return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${transaction}`, { method: "PUT", body: content });
+  async sendEvent(roomId: string, type: string, content: any, txnId: string): Promise<{ event_id: string }> {
+    return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${txnId}`, { method: "PUT", body: content });
   }
   
   async sendState(roomId: string, type: string, content: any, stateKey: string = ""): Promise<object> {
