@@ -1,14 +1,13 @@
 Documentation *will* change!
 
 ```ts
-
 export interface ClientConfig {
   token: string,   // your access token
   baseUrl: string, // the homeserver's base url
   userId: string,  // your user id
 }
 
-export type ClientStatus = "stopped" | "starting" | "syncing" | "reconnecting"
+export type ClientStatus = "stopped" | "starting" | "syncing" | "reconnecting";
 
 type AccountData = { type: string, content: any }
 type Notifications = { unread: number, highlight: number }
@@ -29,8 +28,9 @@ interface ClientEvents {
   on(event: "leave", listener: (room: Room) => any): this,                   // when you leave a room
   
   // misc
-  on(event: "accountData", listener: (event: AccountData) => any): this,     // when your account data changes
-  on(event: "roomAccountData", listener: (event: AccountData, room: Room) => any): this, // when room-specific account data changes
+  on(event: "remoteEcho", listener: (echo: LocalEvent, txnId: string) => any): this,      // when an event finishes sending
+  on(event: "accountData", listener: (event: AccountData) => any): this,                  // when your account data changes
+  on(event: "roomAccountData", listener: (event: AccountData, room: Room) => any): this,  // when room-specific account data changes
   on(event: "notifications", listener: (notifs: Notifications, room: Room) => any): this, // when your notification count changes for a room
 }
 

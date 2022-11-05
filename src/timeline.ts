@@ -72,6 +72,10 @@ export default class Timeline extends Array {
     for (let raw of res.chunk ?? []) {
       if (raw.unsigned?.redacted_because) continue;
       if (raw.type === "m.room.redaction") continue;
+      if (raw.state_key && this.room.getState(raw.type, raw.state_key)?.id !== raw.event_id) {
+        this.room.handleState(new StateEvent(this.room, raw as any));
+      }
+
       this._add(new Event(this.room, raw), direction === "backwards");
       added++;
     }
