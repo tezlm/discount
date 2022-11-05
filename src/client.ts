@@ -52,6 +52,7 @@ interface ClientEvents {
   // maybe have a base room -> joined room/invited room/left room?
   
   // misc
+  // TODO: event when a remote echo fails to send
   on(event: "remoteEcho", listener: (echo: LocalEvent, txnId: string) => any): this,
   on(event: "accountData", listener: (event: api.AccountData) => any): this,
   on(event: "roomAccountData", listener: (event: api.AccountData, room: Room) => any): this,
@@ -165,7 +166,6 @@ export default class Client extends Emitter implements ClientEvents {
         if (!room) return;
         
         if (data.timeline) {
-          if (!room) throw "how did we get here?";
           for (let raw of data.timeline.events) {
             const txnId = raw.unsigned?.transaction_id;
             const txn = this._transactions.get(txnId);
@@ -184,6 +184,12 @@ export default class Client extends Emitter implements ClientEvents {
               } else {
                 room.events.live?._add(event);
                 this.emit("event", event);
+              }
+              // dendrite doesn't send room.state if the state event exists in timeline
+              if ((typeof event.stateKey ===  "string") && room.getState(event.type, event.stateKey)?.id !== event.id) {
+                const state = new StateEvent(room, raw as any);
+                room.handleState(state);
+                this.emit("state", state);
               }
             }
           }
@@ -240,7 +246,7 @@ export default class Client extends Emitter implements ClientEvents {
       const filterId = await this.fetcher.postFilter(this.userId, {
         room: {
           state: { lazy_load_members: true },
-          timeline: { limit: 0 },
+          timeline: { limit: 2 },
         },
         presence: {
           types: [],
