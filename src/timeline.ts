@@ -32,8 +32,8 @@ export default class Timeline extends Array {
   
   constructor(
     public room: Room,
-    private batchPrev: string | null,
-    private batchNext: string | null,
+    public batchPrev: string | null,
+    public batchNext: string | null,
   ) {
     super();
   }
@@ -43,12 +43,12 @@ export default class Timeline extends Array {
     if (direction === "backwards") {
       if (this._backwardsProm) return this._backwardsProm;
       if (!this.batchPrev) return null;
-      this._backwardsProm = this.client.fetcher.fetchMessages(this.room.id, this.batchPrev, "b", limit);
+      this._backwardsProm = this.client.fetcher.fetchMessages(this.room.id, { from: this.batchPrev, direction: "b", limit });
       return this._backwardsProm;
     } else {
       if (this._forwardsProm) return this._forwardsProm;
       if (!this.batchNext) return null;
-      this._forwardsProm = this.client.fetcher.fetchMessages(this.room.id, this.batchNext, "f", limit);
+      this._backwardsProm = this.client.fetcher.fetchMessages(this.room.id, { from: this.batchNext, direction: "f", limit });
       return this._forwardsProm;
     }
   }

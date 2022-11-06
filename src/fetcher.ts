@@ -27,6 +27,7 @@ export default class Fetcher {
     private baseUrl: string,
   ) {}
   
+  // fetching utility functions
   async fetchUnauth(path: string, options: FetchOptions): Promise<any> {
     const query = options.query ? stringifyQueryParams(options.query) : "";
     
@@ -58,6 +59,27 @@ export default class Fetcher {
     return this.fetch(`/media/v3${path}`, options);
   }
   
+  // authentication
+  // TODO: other ways of authentication, oidc
+  // async login(userId: string, password: string, deviceName: string = Math.random().toString(36).slice(2)) {
+  //   return this.fetchUnauth("/login", {
+  //     method: "POST",
+  //     body: {
+  //       type: "m.login.password",
+  //       identifier: {
+  //         type: "m.id.user",
+  //         user: userId,
+  //       },
+  //       password: password,
+  //       initial_device_display_name: deviceName,
+  //     },
+  //   });
+  // }
+  
+  logout() {
+    return this.fetchClient("/logout", { method: "POST" });
+  }
+   
   // syncing
   async sync(since?: string, abort?: AbortController, timeout?: number): Promise<api.Sync> {
     const query = { since, filter: this.filter, timeout: timeout?.toString() ?? "60000" };
@@ -74,8 +96,10 @@ export default class Fetcher {
     return this.fetch(`/profile/${encode(userId)}`, {});
   }
   
-  async fetchMessages(roomId: string, from: string, direction: "b" | "f", limit = 200): Promise<api.Messages> {
-    return this.fetchClient(`/rooms/${encode(roomId)}/messages?from=${encode(from)}&dir=${direction}&limit=${limit}`, {});
+  async fetchMessages(roomId: string, options: { from?: string, direction?: "b" | "f", limit?: number } = {}): Promise<api.Messages> {
+    let qs = `limit=${options.limit || 200}&dir=${options.direction || "b"}`;
+    if (options?.from) qs += `&from=${encode(options.from)}`;
+    return this.fetchClient(`/rooms/${encode(roomId)}/messages?${qs}`, {});
   }
 
   async fetchContext(roomId: string, eventId: string, limit = 200): Promise<api.Context> {

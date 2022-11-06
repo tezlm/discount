@@ -12,7 +12,7 @@ export default class Members extends Map<string, Member> {
   }
   
   _handle(event: StateEvent) {
-    if (event.type !== "m.room.member") throw "not m.room.member";
+    if (event.type !== "m.room.member") throw new Error("members cache got a non-m.room.member event");
     const id = event.stateKey;
     const member = new Member(this.room, event);
     this.set(id, member);

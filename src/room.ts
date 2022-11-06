@@ -8,7 +8,7 @@ import Power from "./power";
 type JoinRule = "invite" | "public" | "knock" | "restricted" | "knock_restricted";
 
 export default class Room {
-  private state: Array<StateEvent> = [];
+  public state: Array<StateEvent> = [];
   
   public name: string | null = null;
   public topic: string | null = null;
@@ -19,6 +19,9 @@ export default class Room {
   public events: Events = new Events(this);
   public accountData: Map<string, any> = new Map();
   public notifications = { unread: 0, highlight: 0 };
+
+    // TEMP: event.live may be null and discard needs to be able to mark as read, so this exists for now
+  public TEMPlastEventId?: string;
   
   constructor(
     public client: Client,

@@ -16,7 +16,7 @@ export default class Member {
     public room: Room,
     public event: StateEvent
   ) {
-    if (!event.stateKey) throw "event must have stateKey";
+    if (!event.stateKey) throw new Error("event must have stateKey");
     this.room = room;
     this.event = event;
     this.id = intern(event.stateKey);
