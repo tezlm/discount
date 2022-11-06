@@ -1,5 +1,5 @@
 import type Room from "./room";
-import { Event, Relation } from "./event";
+import { Event, StateEvent, Relation } from "./event";
 import Timeline from "./timeline";
 
 export default class Events extends Map<string, Event> {
@@ -23,10 +23,27 @@ export default class Events extends Map<string, Event> {
     if (eventId) {
       // const context = await this.client.fetcher.fetchContext(this.room.id, eventId, 50);
       // console.log(context);
-      throw "unimplemented! cannot fetch timeline for context";
+      throw new Error("fetching a timeline from event context is currently unimplemented!");
     } else {
       if (this.live) return this.live;
-      throw "unimplemented! cannot fetch new live timeline";
+      const res = await this.client.fetcher.fetchMessages(this.room.id);
+      const timeline = new Timeline(this.room, res.start, res.end);
+      for (let raw of res.state ?? []) {
+        this.room.handleState(new StateEvent(this.room, raw));
+      }
+    
+      for (let raw of res.chunk.reverse()) {
+        if (raw.unsigned?.redacted_because) continue;
+        if (raw.type === "m.room.redaction") continue;
+        if (raw.state_key && this.room.getState(raw.type, raw.state_key)?.id !== raw.event_id) {
+          this.room.handleState(new StateEvent(this.room, raw as any));
+        }
+
+        timeline._add(new Event(this.room, raw));
+      }
+      
+      this.live = timeline;
+      return timeline;
     }
   }
 }

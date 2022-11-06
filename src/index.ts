@@ -1,12 +1,5 @@
-import Client from "./client";
-import Room from "./room";
-import { Event, StateEvent } from "./event";
-import Member from "./member";
-
-export {
-  Client,
-  Room,
-  Event,
-  StateEvent,
-  Member,
-}
+export { default as Client } from "./client";
+export { default as Room } from "./room";
+export { Event, StateEvent, LocalEvent } from "./event";
+export { default as Member } from "./member";
+export * as persist from "./persist"; // TODO: find out how to let people `import "discard/persist"`

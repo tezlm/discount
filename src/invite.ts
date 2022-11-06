@@ -38,11 +38,11 @@ export default class Invite {
     // return this.state.filter(i => i.type === type);
   // }
   
-  join() {
-    return this.client.fetcher.joinRoom(this.id);
+  async join() {
+    await this.client.fetcher.joinRoom(this.id);
   }
   
-  leave() {
-    return this.client.fetcher.leaveRoom(this.id);
+  async leave() {
+    await this.client.fetcher.leaveRoom(this.id);
   }
 }

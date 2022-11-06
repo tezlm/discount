@@ -8,58 +8,65 @@ import Invite from "./invite";
 import Timeline from "./timeline";
 import { Event, StateEvent, EphemeralEvent, LocalEvent } from "./event";
 
-import Persister, { MemoryPersister } from "./persist";
+import Database, { MemoryDB } from "./persist";
 
 interface StatePersist {
-  accountData: { type: string, value: any },
-  room: {
-    roomId: string,
+  options: any,
+  accountData: any,
+  rooms: {
     state: Array<api.RawStateEvent>,
-    accountData: Array<{ type: string, value: any }>,
+    accountData: Array<{ type: string, content: any }>,
+    TEMPlastEventId: string,
     notifications: { unread: 0, highlight: 0 },
-    // timeline: Array<api.RawEvent>
   },
-  // user: { id: string, data: api.UserData },
-  batchToken: string,
+  invites: {
+    state: Array<api.RawStateEvent>,
+  },
+  users: {
+    name: string,
+    avatar: string,
+    [key: string]: any,
+  },
 }
 
 export interface ClientConfig {
   token: string,
   baseUrl: string,
   userId: string,
-  persister?: Persister<StatePersist>,
+  persister?: Database<StatePersist>,
 }
 
 export type ClientStatus = "stopped" | "starting" | "syncing" | "reconnecting";
 
-interface ClientEvents {
-  on(event: "status", listener: () => any): this,
-  on(event: "ready", listener: () => any): this,
-  on(event: "error", listener: (error: Error) => any): this,
+type ClientEvents = {
+  status: (status: string) => void,
+  ready:  () => void,
+  error:  (error: Error) => void,
   
   // events
-  on(event: "event", listener: (event: Event) => any): this,
-  on(event: "state", listener: (state: StateEvent) => any): this,
-  on(event: "ephemeral", listener: (edu: EphemeralEvent) => any): this,
+  event:     (event: Event) => void,
+  redact:    (event: Event) => void,
+  state:     (state: StateEvent) => void,
+  ephemeral: (edu: EphemeralEvent) => void,
   
   // membership
-  on(event: "join", listener: (room: Room, prevPatch: string) => any): this,
-  on(event: "invite", listener: (room: Invite) => any): this,
-  on(event: "leave", listener: (room: Room) => any): this,
-  on(event: "leave-invite", listener: (room: Invite) => any): this, // temporary for rejecting/uninviting
+  join:           (room: Room) => void,
+  invite:         (room: Invite) => void,
+  leave:          (room: Room) => void,
+  inviteLeave:    (room: Invite) => void, // temporary => void,
   // i want to replace special case "invite" with a room or room-compatible class
   // so that i can use standard events (state/leave/roomAccountData) with it
   // maybe have a base room -> joined room/invited room/left room?
   
   // misc
   // TODO: event when a remote echo fails to send
-  on(event: "remoteEcho", listener: (echo: LocalEvent, txnId: string) => any): this,
-  on(event: "accountData", listener: (event: api.AccountData) => any): this,
-  on(event: "roomAccountData", listener: (event: api.AccountData, room: Room) => any): this,
-  on(event: "notifications", listener: (events: { unread: number, highlight: number }, room: Room) => any): this,
+  remoteEcho:      (echo: LocalEvent, txnId: string) => void,
+  accountData:     (event: api.AccountData) => void,
+  roomAccountData: (room: Room, event: api.AccountData) => void,
+  notifications:   (room: Room, events: { unread: number, highlight: number }) => void,
 }
 
-export default class Client extends Emitter implements ClientEvents {
+export default class Client extends Emitter<ClientEvents> {
   public status: ClientStatus = "stopped";
   public fetcher: Fetcher;
   public userId: string;
@@ -69,7 +76,7 @@ export default class Client extends Emitter implements ClientEvents {
   public accountData = new Map<string, any>();
   public _transactions = new Map<string, LocalEvent>();
   private abort = new AbortController();
-  private persister: Persister<StatePersist> = new MemoryPersister();
+  private persister: Database<StatePersist> = new MemoryDB();
   
   constructor(config: ClientConfig) {
     super();
@@ -91,9 +98,9 @@ export default class Client extends Emitter implements ClientEvents {
     
     while(true) {
       try {
-        const sync = await this.fetcher.sync(since, this.abort, 1);
+        const sync = await this.fetcher.sync(since, this.abort, 0);
         if (!sync) continue;
-        this.handleSync(sync);
+        if (await this.handleSync(sync)) await this.save(sync);
         this.setStatus("syncing");
         this.sync(sync.next_batch);
         break;
@@ -110,7 +117,7 @@ export default class Client extends Emitter implements ClientEvents {
     const sync = await this.fetcher.sync(since, this.abort)
       .catch((err) => this.handleError(err, since));
     if (!sync) return;
-    await this.handleSync(sync);
+    if (await this.handleSync(sync)) await this.save(sync);
 
     if (this.status === "starting") {
       this.setStatus("syncing");
@@ -120,8 +127,11 @@ export default class Client extends Emitter implements ClientEvents {
     this.sync(sync.next_batch);
   }
   
-  private async handleSync(sync: api.Sync) {
+  private async handleSync(sync: api.Sync): Promise<boolean> {
+    let dirty = false;
+    
     if (sync.account_data) {
+        dirty = true;
         for (let event of sync.account_data.events) {
           this.accountData.set(event.type, event.content);
           this.emit("accountData", event);
@@ -133,6 +143,7 @@ export default class Client extends Emitter implements ClientEvents {
       for (let id in r.join ?? {}) {
         const data = r.join![id];
         if (data.state) {
+          dirty = true;
           if (this.rooms.has(id)) {
             const room = this.rooms.get(id);
             for (let raw of data.state.events) {
@@ -142,7 +153,6 @@ export default class Client extends Emitter implements ClientEvents {
             }
           } else {
             const room = new Room(this, id);
-            // TODO: handle next_batch
             const timeline = new Timeline(room, data.timeline?.prev_batch ?? null, null);
             room.events.live = timeline;
 
@@ -163,9 +173,10 @@ export default class Client extends Emitter implements ClientEvents {
         }
 
         const room = this.rooms.get(id);
-        if (!room) return;
+        if (!room) throw new Error("this shouldn't be possible: " + id);
         
         if (data.timeline) {
+          dirty = true;
           for (let raw of data.timeline.events) {
             const txnId = raw.unsigned?.transaction_id;
             const txn = this._transactions.get(txnId);
@@ -179,8 +190,7 @@ export default class Client extends Emitter implements ClientEvents {
             } else {
               const event = new Event(room!, raw);
               if (raw.type === "m.room.redaction") {
-                room.events.live?._redact(event);
-                this.emit("redact", event);
+                room.events.live?._redact(event); this.emit("redact", event);
               } else {
                 room.events.live?._add(event);
                 this.emit("event", event);
@@ -196,6 +206,7 @@ export default class Client extends Emitter implements ClientEvents {
         }
         
         for (let event of data.account_data?.events ?? []) {
+          dirty = true;
           room.accountData.set(event.type, event.content);
           this.emit("roomAccountData", room, event);
         }
@@ -203,18 +214,19 @@ export default class Client extends Emitter implements ClientEvents {
         for (let event of data.ephemeral?.events ?? []) this.emit("ephemeral", new EphemeralEvent(room, event));
       
         if (data.unread_notifications) {
+          dirty = true;
           const apiNotifs = data.unread_notifications;
           const notifs = { unread: apiNotifs.notification_count, highlight: apiNotifs.highlight_count };
           room.notifications = notifs;
           this.emit("notifications", room, notifs);
         }
       }
-     
 
       for (let id in r.invite ?? {}) {
+        dirty = true;
         if (this.invites.has(id)) {
-          const invite = this.invites.get(id);
-          for (let ev of r.invite![id].invite_state.events) invite?.handleState(ev);
+          const invite = this.invites.get(id)!;
+          for (let ev of r.invite![id].invite_state.events) invite.handleState(ev);
         } else {
           const invite = new Invite(this, id);
           for (let ev of r.invite![id].invite_state.events) invite.handleState(ev, false);
@@ -224,24 +236,61 @@ export default class Client extends Emitter implements ClientEvents {
       }
       
       for (let id in r.leave ?? {}) {
+        dirty = true;
         if (this.rooms.has(id)) {
-          const room = this.rooms.get(id);
+          const room = this.rooms.get(id)!;
           this.rooms.delete(id);
           this.emit("leave", room);
         }
         if (this.invites.has(id)) {
           // TODO: merge with normal `leave` and make Invites Rooms
-          const invite = this.invites.get(id);
+          const invite = this.invites.get(id)!;
           this.invites.delete(id);
-          this.emit("leave-invite", invite);
+          this.emit("inviteLeave", invite);
         }
       }
     }
+    
+    return dirty;
+  }
+  
+  // TODO: optimize sync - only persist exactly what changed
+  // private async save(sync: api.Sync, deltas: Array<Room | Invite | accountdata>) {
+  private async save(sync: api.Sync) {
+    const roomData = new Map();
+    const inviteData = new Map();
+    
+    for (let [id, room] of this.rooms) {
+      roomData.set(id, {
+        state: room.state.map(i => i.raw),
+        accountData: [...room.accountData].map(([type, content]) => ({ type, content })),
+        TEMPlastEventId: room.events.live?.at(-1).id ?? room.TEMPlastEventId,
+        notifications: room.notifications,
+      });
+    }
+    
+    for (let [id, invite] of this.invites) {
+      inviteData.set(id, {
+        state: invite.state,
+      });
+    }
+    
+    await Promise.all([
+      this.persister.deleteAll("accountData"),
+      this.persister.deleteAll("rooms"),
+      this.persister.deleteAll("invites"),
+    ]);
+    await Promise.all([
+      this.persister.putAll("rooms", roomData),
+      this.persister.putAll("invites", inviteData),
+      this.persister.putAll("accountData", this.accountData),
+      this.persister.put("options", "sync", sync),
+    ]);
   }
   
   public async start() {
     this.setStatus("starting");
-    await this.persister.open("persister", ["accountData"], 1);
+    
     if (!this.fetcher.filter) {
       const filterId = await this.fetcher.postFilter(this.userId, {
         room: {
@@ -252,13 +301,94 @@ export default class Client extends Emitter implements ClientEvents {
           types: [],
         },
       });
+            
       this.fetcher.filter = filterId;
     }
-    this.sync();
+    
+    await this.persister.open(["options", "accountData", "rooms", "invites", "users"], 1);
+    const savedSync: api.Sync = await this.persister.get("options", "sync");
+    if (savedSync) {
+      console.log("found saved sync! restoring...");
+      
+      const [accountData, rooms, invites] = await Promise.all([
+        this.persister.getAll("accountData"),
+        this.persister.getAll("rooms"),
+        this.persister.getAll("invites"),
+      ]);
+      
+      for (let [type, content] of accountData) {
+        this.accountData.set(type, content);
+        this.emit("accountData", { type, content });
+      }
+      
+      for (let [roomId, data] of rooms) {
+        const room = new Room(this, roomId);
+        for (let raw of data.state) room.handleState(new StateEvent(room, raw), false);
+        this.rooms.set(roomId, room);
+        this.emit("join", room);
+        
+        const savedTimeline = savedSync.rooms?.join?.[roomId]?.timeline;
+        if (savedTimeline) {
+          const timeline = new Timeline(room, savedTimeline.prev_batch ?? null, null);
+          room.events.live = timeline;
+          for (let raw of savedTimeline.events) {
+            const event = new Event(room!, raw);
+            if (raw.type === "m.room.redaction") {
+              timeline._redact(event);
+              this.emit("redact", event);
+            } else {
+              timeline._add(event);
+              this.emit("event", event);
+            }
+            
+            // dendrite doesn't send room.state if the state event exists in timeline
+            if ((typeof event.stateKey ===  "string") && room.getState(event.type, event.stateKey)?.id !== event.id) {
+              const state = new StateEvent(room, raw as any);
+              room.handleState(state);
+              this.emit("state", state);
+            }
+          }
+        }
+        
+        for (let { type, content } of data.accountData) {
+          room.accountData.set(type, content);
+          this.emit("roomAccountData", room, { type, content });
+        }
+        
+        room.TEMPlastEventId = data.TEMPlastEventId;
+        room.notifications = data.notifications;
+        this.emit("notifications", room, data.notifications);
+      }
+      for (let [roomId, data] of invites) {
+        const invite = new Invite(this, roomId);
+        for (let raw of data.state) invite.handleState(raw, false);
+        this.invites.set(roomId, invite);
+        this.emit("invite", invite);
+      }
+      this.setStatus("syncing");
+      this.emit("ready");
+      this.sync(savedSync.next_batch);
+    } else {
+      this.sync();
+    }
   }
   
   public async stop() {
     this.abort.abort();
+    this.persister.close();
+    this.setStatus("stopped");
+  }
+  
+  // how to do this? should i use a static function for login?
+  public async login() {
+    throw new Error("unimplemented");
+  }
+  
+  public async logout() {
+    this.abort.abort();
+    await this.persister.clear();
+    await this.persister.close();
+    await this.fetcher.logout();
     this.setStatus("stopped");
   }
   

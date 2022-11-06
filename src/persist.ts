@@ -1,67 +1,76 @@
 import type * as IdbT from "idb";
 import type * as Sqlite3T from "better-sqlite3"; // TODO: sqlite3 persister
 
-/*
-easy to save
-- last save token
-- room state
-- account data
-
-difficult
-- timeline/last batch
-
-currently all code expects the room to have an `events.live` live
-timeline, which itself requires a last batch token which i won't get
-*/
-
-export default abstract class Persister<Types extends Record<string, any>> {
-  abstract open<Db extends keyof Types & string>(databaseName: string, keys: Array<Db>, version: number): Promise<void>;
+export default abstract class Database<Types extends Record<string, any>> {
+  abstract open<Table extends keyof Types & string>(keys: Array<Table>, version: number): Promise<void>;
   abstract close(): Promise<void>;
-  abstract put<Db extends keyof Types & string>(db: Db, key: string, val: Types[Db]): Promise<void>;
-  abstract putAll<Db extends keyof Types & string>(db: Db, values: Map<string, any>): Promise<void>;
-  abstract get<Db extends keyof Types & string>(db: Db, key: string): Promise<Types[Db]>;
-  abstract getAll<Db extends keyof Types & string>(db: Db): Promise<Map<string, any>>;
+  abstract clear(): Promise<void>;
+  abstract get<Table extends keyof Types & string>(db: Table, key: string): Promise<Types[Table]>;
+  abstract getAll<Table extends keyof Types & string>(db: Table): Promise<Map<string, Types[Table]>>;
+  abstract put<Table extends keyof Types & string>(db: Table, key: string, val: Types[Table]): Promise<void>;
+  abstract putAll<Table extends keyof Types & string>(db: Table, values: Map<string, any>): Promise<void>;
+  abstract delete<Table extends keyof Types & string>(db: Table, key: string): Promise<void>;
+  abstract deleteAll<Table extends keyof Types & string>(db: Table): Promise<void>;
 }
 
-export class MemoryPersister<Types extends Record<string, any>> extends Persister<Types> {
+export class MemoryDB<Types extends Record<string, any>> extends Database<Types> {
   private map = new Map();
   
-  async open<Db extends keyof Types & string>(_name: string, keys: Array<Db>, _version: number): Promise<void> {
+  async open<Table extends keyof Types & string>(keys: Array<Table>, _version: number): Promise<void> {
     for (let key of keys) {
-      this.map.set(key, new Map<Db, Types[Db]>());
+      this.map.set(key, new Map<Table, Types[Table]>());
     }
   }
   
   async close() {
+    // nothing to see here
+  }
+  
+  async clear() {
     this.map.clear();
   }
   
-  async put<Db extends keyof Types & string>(db: Db, key: string, val: Types[Db]) {
+  async get<Table extends keyof Types & string>(db: Table, key: string): Promise<Types[Table]> {
+    return this.map.get(db).get(key);
+  }
+  
+  async getAll<Table extends keyof Types & string>(db: Table): Promise<Map<string, Types[Table]>> {
+    return this.map.get(db);
+  }
+  
+  async put<Table extends keyof Types & string>(db: Table, key: string, val: Types[Table]) {
     this.map.get(db).set(key, val);
   }
   
-  async putAll<Db extends keyof Types & string>(db: Db, values: Map<string, Types[Db]>) {
+  async putAll<Table extends keyof Types & string>(db: Table, values: Map<string, Types[Table]>) {
     const map = this.map.get(db);
     for (let [key, val] of values) {
       map.set(key, val);
     }
   }
-  
-  async get<Db extends keyof Types & string>(db: Db, key: string): Promise<Types[Db]> {
-    return this.map.get(db).get(key);
+
+  async delete<Table extends keyof Types & string>(db: Table, key: string) {
+    this.map.get(db).delete(key);
   }
   
-  async getAll<Db extends keyof Types & string>(db: Db): Promise<Map<string, any>> {
-    return this.map.get(db);
+  async deleteAll<Table extends keyof Types & string>(db: Table) {
+    this.map.get(db).clear();
   }
 }
 
-export class IDBPersister<Types extends Record<string, any>> extends Persister<Types> {
+// "indexed database database"
+export class IdbDB<Types extends Record<string, any>> extends Database<Types> {
   private db: IdbT.IDBPDatabase | null = null;
+  private keys: Array<string> = [];
   
-  async open(databaseName: string, keys: Array<string>, version = 1) {
+  constructor(private databaseName: string) {
+    super();
+  }
+  
+  async open(keys: Array<string>, version = 1) {
     const { openDB } = await import("idb");
-    this.db = await openDB(databaseName, version, {
+    this.keys = keys;
+    this.db = await openDB(this.databaseName, version, {
       upgrade(db) {
         for (let key of keys) {
           db.createObjectStore(key);
@@ -71,16 +80,35 @@ export class IDBPersister<Types extends Record<string, any>> extends Persister<T
   }
   
   async close() {
-    throw "TODO!";
+    if (!this.db) throw new Error("you must .open the database first");
+    this.db?.close();
+    this.db = null;
   }
   
-  async put<Db extends keyof Types & string>(db: Db, key: string, val: Types[Db]) {
-    if (!this.db) throw "you must .open the database first";
+  async clear() {
+    if (!this.db) throw new Error("you must .open the database first");
+    const { db, keys } = this;
+    await Promise.all(keys.map(key => db.clear(key)));
+  }
+  
+  async get<Table extends keyof Types & string>(db: Table, key: string): Promise<Types[Table]> {
+    if (!this.db) throw new Error("you must .open the database first");
+    return this.db.get(db, key);
+  }
+  
+  async getAll<Table extends keyof Types & string>(db: Table): Promise<Map<string, Types[Table]>> {
+    if (!this.db) throw new Error("you must .open the database first");
+    const [keys, vals] = await Promise.all([this.db.getAllKeys(db), this.db.getAll(db)]);
+    return new Map(keys.map((k, i) => [k as string, vals[i]]));
+  }
+  
+  async put<Table extends keyof Types & string>(db: Table, key: string, val: Types[Table]) {
+    if (!this.db) throw new Error("you must .open the database first");
     this.db.put(db, val, key);
   }
   
-  async putAll<Db extends keyof Types & string>(db: Db, values: Map<string, Types[Db]>) {
-    if (!this.db) throw "you must .open the database first";
+  async putAll<Table extends keyof Types & string>(db: Table, values: Map<string, Types[Table]>) {
+    if (!this.db) throw new Error("you must .open the database first");
     const tx = this.db.transaction(db, "readwrite");
     const store = tx.objectStore(db);
     for (let [key, val] of values) {
@@ -89,14 +117,33 @@ export class IDBPersister<Types extends Record<string, any>> extends Persister<T
     await tx.done;
   }
   
-  async get<Db extends keyof Types & string>(db: Db, key: string): Promise<Types[Db]> {
-    if (!this.db) throw "you must .open the database first";
-    return this.db.get(db, key);
+  async delete<Table extends keyof Types & string>(db: Table, key: string) {
+    if (!this.db) throw new Error("you must .open the database first");
+    this.db.delete(db, key);
   }
   
-  async getAll<Db extends keyof Types & string>(db: Db): Promise<Map<string, any>> {
-    if (!this.db) throw "you must .open the database first";
-    const [keys, vals] = await Promise.all([this.db.getAllKeys(db), this.db.getAll(db)]);
-    return new Map(keys.map((k, i) => [k as string, vals[i]]));
+  async deleteAll<Table extends keyof Types & string>(db: Table) {
+    if (!this.db) throw new Error("you must .open the database first");
+    this.db.clear(db);
   }
 }
+
+/* TODO: sqlite3 persister backend for nodejs
+export class Sqlite3DB<Types extends Record<string, any>> extends Database<Types> {
+  private db?: Sqlite3T.Database;
+
+  constructor(private path: string) {
+    super();
+  }  
+
+  async open(databaseName: string, keys: Array<string>, version = 1) {
+    const { default: Database } = await import("better-sqlite3");
+    this.db = new Database(databaseName, {});
+    const sql = this.db.prepare("CREATE TABLE ? (key STRING PRIMARY KEY, value STRING)");
+    for (let key of keys) sql.run(key);
+  }
+  
+  async get<Table extends keyof Types & string>(table: Table, key: string): Promise<Types[Table]> {
+  }
+}
+*/
