@@ -141,7 +141,7 @@ export class Sqlite3DB<Types extends Record<string, any>> extends Database<Types
 
   async open(keys: Array<string>, _ver = 1) {
     this.keys = keys;
-    const { default: Database } = await import("better-sqlite3");
+    const Database = await import("better-sqlite3");
     this.db = new Database(this.path, {});
     for (let key of keys) {
       this.db!.exec(`CREATE TABLE ${key} (key STRING PRIMARY KEY, value STRING)`);
