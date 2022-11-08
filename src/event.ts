@@ -1,26 +1,7 @@
 import type Room from "./room";
 import type Member from "./member";
+import type { RawEvent, RawStateEvent, RawEphemeralEvent } from "./api";
 import { intern } from "./util";
-
-export interface RawEvent {
-  event_id: string,
-  type: string,
-  sender: string,
-  content: any,
-  unsigned?: any,
-  origin_server_ts: number,
-  state_key?: string,
-  redacts?: string,
-}
-
-export interface RawStateEvent extends RawEvent {
-  state_key: string,
-}
-
-export interface RawEphemeralEvent {
-  content: any,
-  type: string,
-}
 
 export interface RawLocalEvent {
   type: string,
@@ -158,13 +139,36 @@ export class Event<RawType extends RawEvent = RawEvent> {
     return ev;
   }
   
-  // edit(content: any) {}
-  // reply(type: string, content: any) {}
+  async edit(content: any, txnId?: string) {
+    if (this.isState()) throw "Cannot edit state events for now";
+    
+    // @ts-ignore
+    const edit = this.relationsIn?.findLast(i => i.relType === "m.replace");   
+    
+    return this.room.sendEvent(this.type, {
+      "m.relates_to": {
+        rel_type: "m.replace",
+        event_id: edit?.id ?? this.id,
+      },
+      "m.new_content": content,
+    }, txnId);
+  }
+  
+  reply(type: string, content: any, txnId?: string) {
+    if (this.isState()) throw "Cannot edit state events for now";
+    return this.room.sendEvent(type, {
+      ...content,
+      "m.relates_to": {
+        "m.in_reply_to": {
+          event_id: this.id,
+        },
+        ...content["m.relates_to"],
+      },
+    }, txnId);
+  }
   
   // TEMP: discard compat
   public flags = new Set<string>();
-  get eventId(): string { return this.raw.event_id }
-  get roomId(): string { return this.room.id }
   get date(): Date { return this.timestamp }
   
   private _reactionsCache: Map<string, Array<Event>> | null = null;
