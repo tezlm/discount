@@ -1,6 +1,6 @@
 {
   "name": "discount.js",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "another matrix library",
   "author": "tezlm",
   "type": "module",
@@ -13,6 +13,10 @@
   "keywords": [
     "matrix"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://git.celery.eu.org/tezlm/discard"
+  },
   "license": "ISC",
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.2",
