@@ -27,7 +27,7 @@ export default class Events extends Map<string, Event> {
     } else {
       if (this.live) return this.live;
       const res = await this.client.fetcher.fetchMessages(this.room.id);
-      const timeline = new Timeline(this.room, res.start, res.end);
+      const timeline = new Timeline(this.room, res.end, res.start);
       for (let raw of res.state ?? []) {
         this.room.handleState(new StateEvent(this.room, raw));
       }

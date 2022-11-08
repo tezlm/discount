@@ -1,5 +1,7 @@
 import type * as IdbT from "idb";
-import type * as Sqlite3T from "better-sqlite3"; // TODO: sqlite3 persister
+import type * as Sqlite3T from "better-sqlite3";
+// FIXME: importing this library breaks everything
+// import type * as BunSqlT from "bun:sqlite";
 
 export default abstract class Database<Types extends Record<string, any>> {
   abstract open<Table extends keyof Types & string>(keys: Array<Table>, version: number): Promise<void>;
@@ -128,22 +130,63 @@ export class IdbDB<Types extends Record<string, any>> extends Database<Types> {
   }
 }
 
-/* TODO: sqlite3 persister backend for nodejs
+// TODO: bun sqlite database
 export class Sqlite3DB<Types extends Record<string, any>> extends Database<Types> {
   private db?: Sqlite3T.Database;
-
+  private keys: Array<string> = [];
+  
   constructor(private path: string) {
     super();
   }  
 
-  async open(databaseName: string, keys: Array<string>, version = 1) {
+  async open(keys: Array<string>, _ver = 1) {
+    this.keys = keys;
     const { default: Database } = await import("better-sqlite3");
-    this.db = new Database(databaseName, {});
-    const sql = this.db.prepare("CREATE TABLE ? (key STRING PRIMARY KEY, value STRING)");
-    for (let key of keys) sql.run(key);
+    this.db = new Database(this.path, {});
+    for (let key of keys) {
+      this.db!.exec(`CREATE TABLE ${key} (key STRING PRIMARY KEY, value STRING)`);
+    }
+  }
+  
+  async clear(): Promise<void> {
+    for (let key of this.keys) {
+      this.db!.exec(`DELETE FROM ${key}`);
+    }
+  }
+  
+  async close(): Promise<void> {
+    if (!this.db) throw new Error("you must .open the database first");
+    this.db.close();
   }
   
   async get<Table extends keyof Types & string>(table: Table, key: string): Promise<Types[Table]> {
+    if (!this.db) throw new Error("you must .open the database first");
+    return this.db.prepare(`SELECT value FROM ${table} WHERE key = ?`).get(key)?.value;
+  }
+  
+  async getAll<Table extends keyof Types & string>(table: Table): Promise<Map<string, Types[Table]>> {
+    if (!this.db) throw new Error("you must .open the database first");
+    return new Map(this.db.prepare(`SELECT * FROM ${table}`).all()?.map(i => [i.key, i.value]));
+  }
+  
+  async put<Table extends keyof Types & string>(table: Table, key: string, val: Types[Table]) {
+    if (!this.db) throw new Error("you must .open the database first");
+    this.db.prepare(`INSERT INTO ${table} (key, value) VALUES (?, ?)`).run(key, val);
+  }
+  
+  async putAll<Table extends keyof Types & string>(table: Table, values: Map<string, Types[Table]>) {
+    if (!this.db) throw new Error("you must .open the database first");
+    const sql = this.db.prepare(`INSERT INTO ${table} (key, value) VALUES (?, ?)`);
+    for (let [key, val] of values) sql.run(key, val);
+  }
+  
+  async delete<Table extends keyof Types & string>(table: Table, key: string): Promise<void> {
+    if (!this.db) throw new Error("you must .open the database first");
+    this.db.prepare(`DELETE FROM ${table} (key, value) WHERE key = ?`).run(key);
+  }
+  
+  async deleteAll<Table extends keyof Types & string>(table: Table): Promise<void> {
+    if (!this.db) throw new Error("you must .open the database first");
+    this.db.prepare(`DELETE FROM ${table} (key, value) WHERE key = ?`);
   }
 }
-*/

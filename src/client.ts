@@ -264,7 +264,7 @@ export default class Client extends Emitter<ClientEvents> {
       roomData.set(id, {
         state: room.state.map(i => i.raw),
         accountData: [...room.accountData].map(([type, content]) => ({ type, content })),
-        TEMPlastEventId: room.events.live?.at(-1).id ?? room.TEMPlastEventId,
+        TEMPlastEventId: room.events.live?.at(-1)?.id ?? room.TEMPlastEventId,
         notifications: room.notifications,
       });
     }

@@ -1,16 +1,6 @@
-import type { RawEvent, RawStateEvent } from "./event.js";
-export type { RawEvent, RawStateEvent } from "./event.js";
-
 export interface Error {
   errcode: string,
   error: string,
-}
-
-export interface StrippedState {
-  content: any,
-  sender: string,
-  state_key: string,
-  type: string,
 }
 
 export interface AccountData {
@@ -18,10 +8,37 @@ export interface AccountData {
   content: any,
 }
 
+export interface RawEvent {
+  event_id: string,
+  type: string,
+  sender: string,
+  content: any,
+  unsigned?: any,
+  origin_server_ts: number,
+  state_key?: string,
+  redacts?: string,
+}
+
+export interface RawStateEvent extends RawEvent {
+  state_key: string,
+}
+
+export interface RawEphemeralEvent {
+  content: any,
+  type: string,
+}
+
 interface Timeline {
   events: Array<RawEvent>,
   limited: boolean,
   prev_batch: string,
+}
+
+export interface StrippedState {
+  content: any,
+  sender: string,
+  state_key: string,
+  type: string,
 }
 
 export interface Sync {

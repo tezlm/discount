@@ -1,4 +1,5 @@
-import { Event, StateEvent, RawStateEvent, RawEvent } from "../../src/event.js";
+import { Event, StateEvent} from "../../src/event";
+import { RawStateEvent, RawEvent } from "../../src/api";
 import room from "./room.js";
 import Client from "../../src/client.js";
 
