@@ -1,3 +1,4 @@
+import type Client from "./client";
 import type Room from "./room";
 import { StateEvent } from "./event";
 import Member, { Membership } from "./member";
@@ -5,10 +6,11 @@ import Member, { Membership } from "./member";
 export default class Members extends Map<string, Member> {
   private requests = new Map<string, Promise<any>>;
   private sortCache =  new Map<string, Array<Member>>();
-  public client = this.room.client;
+  public client: Client;
   
   constructor(public room: Room) {
     super();
+    this.client = room.client;
   }
   
   _handle(event: StateEvent) {

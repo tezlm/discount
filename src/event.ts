@@ -1,5 +1,6 @@
 import type Room from "./room";
 import type Member from "./member";
+import type Client from "./client";
 import type { RawEvent, RawStateEvent, RawEphemeralEvent } from "./api";
 import { intern } from "./util";
 
@@ -31,7 +32,7 @@ function useLessMemory(raw: RawEvent) {
 }
 
 export class Event<RawType extends RawEvent = RawEvent> {  
-  public client = this.room.client;
+  public client: Client;
   public raw: RawType;
   public relationsIn:  Array<Relation> | null = null; // events pointing to me
   public relationsOut: Array<Relation> | null = null; // events i pont to
@@ -42,6 +43,8 @@ export class Event<RawType extends RawEvent = RawEvent> {
   public stateKey: string | undefined;
   
   constructor(public room: Room, raw: RawType) {
+    this.client = room.client;
+    
     useLessMemory(raw);
     this.raw = raw;
     
@@ -202,12 +205,14 @@ export class StateEvent extends Event<RawStateEvent> {
 }
 
 export class EphemeralEvent {  
-  public client = this.room.client;
+  public client: Client;
   
   constructor(
     public room: Room,
     public raw: RawEphemeralEvent,
-  ) {}  
+  ) {
+    this.client = room.client;
+  }
   
   get type(): string {
     return this.raw.type;

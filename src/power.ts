@@ -24,7 +24,7 @@ function merge(obj1: any, obj2: any): any {
 }
 
 export default class PowerLevels {
-  public client: Client = this.room.client;
+  public client: Client;
   public levels: RawPowerLevels = {};
   
   public me: number = 0;
@@ -39,6 +39,7 @@ export default class PowerLevels {
   public kick:   number = 50;
   
   constructor(public room: Room) {
+    this.client = room.client;
     this._setLevels(room.getState("m.room.power_levels")?.content);
   }
   

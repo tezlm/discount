@@ -1,3 +1,4 @@
+import type Client from "./client";
 import type Room from "./room";
 import type { StateEvent } from "./event";
 // import User from "./user";
@@ -7,7 +8,7 @@ export type Membership = "join" | "knock" | "invite" | "leave" | "ban";
 
 // export default class Member extends User {
 export default class Member {
-  public client = this.room.client;
+  public client: Client;
   public id: string;
   public name: string;
   public avatar: string;
@@ -17,6 +18,7 @@ export default class Member {
     public event: StateEvent
   ) {
     if (!event.stateKey) throw new Error("event must have stateKey");
+    this.client = room.client;
     this.room = room;
     this.event = event;
     this.id = intern(event.stateKey);

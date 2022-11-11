@@ -1,15 +1,17 @@
+import type Client from "./client";
 import type Room from "./room";
 import { Event, StateEvent, Relation } from "./event";
 import Timeline from "./timeline";
 
 export default class Events extends Map<string, Event> {
-  public client = this.room.client;
+  public client: Client;
   public live: Timeline | null = null;
   public timelines = new Set<Timeline>();
   public _queuedRelations = new Map<string, Array<Relation>>();
   
   constructor(public room: Room) {
     super();
+    this.client = room.client;
   }
   
   async fetch(eventId: string): Promise<Event> {

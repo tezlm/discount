@@ -2,6 +2,8 @@
 
 > Warning: Documentation can and *will* change over time!
 
+> There's a good chance this is already outdated
+
 ## Example
 
 ```ts
@@ -39,6 +41,7 @@ client.on("ready", () => {
 
 client.start(); // start client
 ```
+
 ## API
 
 ```ts

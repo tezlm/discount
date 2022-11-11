@@ -1,12 +1,10 @@
 # discount.ts
 
-A new in-development matrix library because I can't bring myself to use matrix-js-sdk.
+A new in-development matrix library because I dont like matrix-js-sdk.
 
 For now, discount is unstable and being developed alongside discard.
 
-# Discount API
-
-> Warning: Documentation can and *will* change over time!
+> Warning: Discount is under **heavy** development and things will change!
 
 ## Example
 

@@ -1,11 +1,10 @@
 {
   "name": "discount.ts",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "another matrix library",
   "author": "tezlm",
   "type": "module",
   "main": "build/src/index.js",
-  "main": "src/index.ts",
   "types": "build/src/index.d.ts",
   "scripts": {
     "build": "tsc",
@@ -17,7 +16,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://git.celery.eu.org/tezlm/discard"
+    "url": "https://git.celery.eu.org/tezlm/disount"
   },
   "license": "ISC",
   "devDependencies": {

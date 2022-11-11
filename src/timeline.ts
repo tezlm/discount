@@ -1,4 +1,6 @@
 import type Room from "./room";
+import type Client from "./client";
+import type Events from "./events";
 import type * as api from "./api";
 import { Event, StateEvent } from "./event";
 
@@ -25,8 +27,8 @@ function getRelations(event: Event): Array<{ relType: string, eventId: string, k
 }
 
 export default class Timeline extends Array {
-  public client = this.room.client;
-  private events = this.room.events;
+  public client: Client;
+  private events: Events;
   private _forwardsProm: Promise<number> | null = null;
   private _backwardsProm: Promise<number> | null = null;
   
@@ -36,6 +38,8 @@ export default class Timeline extends Array {
     public batchNext: string | null,
   ) {
     super();
+    this.client = room.client;
+    this.events = room.events;
   }
   
   private async fetchItems(direction: "backwards" | "forwards"): Promise<number> {

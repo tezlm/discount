@@ -14,9 +14,9 @@ export default class Room {
   public topic: string | null = null;
   public avatar: string | null = null;
   public type: string | null = null;
-  public power: Power = new Power(this);
-  public members: Members = new Members(this);
-  public events: Events = new Events(this);
+  public power: Power;
+  public members: Members;
+  public events: Events;
   public accountData: Map<string, any> = new Map();
   public notifications = { unread: 0, highlight: 0 };
 
@@ -26,7 +26,11 @@ export default class Room {
   constructor(
     public client: Client,
     public readonly id: string,
-  ) {}
+  ) {
+    this.power = new Power(this);
+    this.members = new Members(this);
+    this.events = new Events(this);
+  }
   
   getState(type: string, key = ""): StateEvent | undefined {
     return this.state.find(i => i.type === type && i.stateKey === key);
