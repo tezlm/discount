@@ -140,7 +140,11 @@ export class Event<RawType extends RawEvent = RawEvent> {
   }
   
   async edit(content: any, txnId?: string) {
-    if (this.isState()) throw "Cannot edit state events for now";
+    if (this.isState()) {
+      throw "Cannot edit state events for now";
+      // would i reuse the stateKey or use txnId?
+      // return this.room.sendState(this.type, content, this.stateKey);
+    }
     
     // @ts-ignore
     const edit = this.relationsIn?.findLast(i => i.relType === "m.replace");   

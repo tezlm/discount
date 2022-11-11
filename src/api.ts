@@ -111,8 +111,8 @@ export interface Filter {
 }
 
 export interface UserData {
-  name: string,
-  avatar: string,
+  displayname: string,
+  avatar_url: string,
   [key: string]: any,
 }
 

@@ -1,22 +1,22 @@
-# discount.js
+# discount.ts
 
 A new in-development matrix library because I can't bring myself to use matrix-js-sdk.
 
 For now, discount is unstable and being developed alongside discard.
 
-# Discard API
+# Discount API
 
 > Warning: Documentation can and *will* change over time!
 
 ## Example
 
 ```ts
-import { Client } from "discount.js";
+import { Client } from "discount.ts";
 
 // create a new client to connect to matrix
 const client = new Client({
   baseUrl: "https://example.org", // your homeserver's url
-  token: "supersecrettoken",     // the client's token
+  token: "supersecrettoken",      // the client's token
   userId: "@bot:example.org",     // the client's userId
 });
 

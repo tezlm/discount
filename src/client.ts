@@ -173,7 +173,7 @@ export default class Client extends Emitter<ClientEvents> {
         }
 
         const room = this.rooms.get(id);
-        if (!room) throw new Error("this shouldn't be possible: " + id);
+        if (!room) throw new Error("tried to access room that doesn't exist");
         
         if (data.timeline) {
           dirty = true;
@@ -308,8 +308,6 @@ export default class Client extends Emitter<ClientEvents> {
     await this.persister.open(["options", "accountData", "rooms", "invites", "users"], 1);
     const savedSync: api.Sync = await this.persister.get("options", "sync");
     if (savedSync) {
-      console.log("found saved sync! restoring...");
-      
       const [accountData, rooms, invites] = await Promise.all([
         this.persister.getAll("accountData"),
         this.persister.getAll("rooms"),
@@ -332,14 +330,12 @@ export default class Client extends Emitter<ClientEvents> {
           const timeline = new Timeline(room, savedTimeline.prev_batch ?? null, null);
           room.events.live = timeline;
           for (let raw of savedTimeline.events) {
+            if (raw.unsigned?.redacted_because) continue;
+            if (raw.type === "m.room.redaction") continue;
+            
             const event = new Event(room!, raw);
-            if (raw.type === "m.room.redaction") {
-              timeline._redact(event);
-              this.emit("redact", event);
-            } else {
-              timeline._add(event);
-              this.emit("event", event);
-            }
+            timeline._add(event);
+            this.emit("event", event);
             
             // dendrite doesn't send room.state if the state event exists in timeline
             if ((typeof event.stateKey ===  "string") && room.getState(event.type, event.stateKey)?.id !== event.id) {

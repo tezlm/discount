@@ -1,7 +1,5 @@
 import type * as IdbT from "idb";
 import type * as Sqlite3T from "better-sqlite3";
-// FIXME: importing this library breaks everything
-// import type * as BunSqlT from "bun:sqlite";
 
 export default abstract class Database<Types extends Record<string, any>> {
   abstract open<Table extends keyof Types & string>(keys: Array<Table>, version: number): Promise<void>;

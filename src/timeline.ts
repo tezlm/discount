@@ -27,8 +27,8 @@ function getRelations(event: Event): Array<{ relType: string, eventId: string, k
 export default class Timeline extends Array {
   public client = this.room.client;
   private events = this.room.events;
-  private _forwardsProm: Promise<api.Messages> | null = null;
-  private _backwardsProm: Promise<api.Messages> | null = null;
+  private _forwardsProm: Promise<number> | null = null;
+  private _backwardsProm: Promise<number> | null = null;
   
   constructor(
     public room: Room,
@@ -38,30 +38,17 @@ export default class Timeline extends Array {
     super();
   }
   
-  private getFetch(direction: "backwards" | "forwards"): Promise<api.Messages> | null {
+  private async fetchItems(direction: "backwards" | "forwards"): Promise<number> {
     const limit = this.length < 20 ? 20 : 200;
+    let res: api.Messages;
     if (direction === "backwards") {
-      if (this._backwardsProm) return this._backwardsProm;
-      if (!this.batchPrev) return null;
-      this._backwardsProm = this.client.fetcher.fetchMessages(this.room.id, { from: this.batchPrev, direction: "b", limit });
-      return this._backwardsProm;
+      if (!this.batchPrev) return 0;
+      res = await this.client.fetcher.fetchMessages(this.room.id, { from: this.batchPrev, direction: "b", limit });
+      this.batchPrev = res.end ?? null;
     } else {
-      if (this._forwardsProm) return this._forwardsProm;
-      if (!this.batchNext) return null;
-      this._backwardsProm = this.client.fetcher.fetchMessages(this.room.id, { from: this.batchNext, direction: "f", limit });
-      return this._forwardsProm;
-    }
-  }
-  
-  async fetch(direction: "backwards" | "forwards") {
-    const res = await this.getFetch(direction);
-    if (!res) return 0;
-    if (direction === "backwards") {
-      this.batchPrev = res.end;
-      this._backwardsProm = null;
-    } else {
-      this.batchNext = res.end;
-      this._forwardsProm = null;
+      if (!this.batchNext) return 0;
+      res = await this.client.fetcher.fetchMessages(this.room.id, { from: this.batchNext, direction: "f", limit });
+      this.batchNext = res.end ?? null;
     }
     
     for (let raw of res.state ?? []) {
@@ -79,8 +66,20 @@ export default class Timeline extends Array {
       this._add(new Event(this.room, raw), direction === "backwards");
       added++;
     }
-    
     return added;
+  }
+  
+  async fetch(direction: "backwards" | "forwards") {
+    const promName = direction === "backwards" ? "_backwardsProm" : "_forwardsProm";
+    if (this[promName]) return this[promName];
+    
+    const prom = this.fetchItems(direction)
+      .then((count: number) => {
+        this[promName] = null;
+        return count;
+      });
+    this[promName] = prom;
+    return prom;    
   }
 
   // merge(other: Timeline): boolean {
@@ -108,9 +107,8 @@ export default class Timeline extends Array {
       }
     }
 
-    // TEMP: discard doesn't like having m.reaction events in the timeline
     this.events.set(event.id, event);
-    if (event.type !== "m.reaction" && !event.content["m.new_content"]) this[toBeginning ? "unshift" : "push"](event);
+    this[toBeginning ? "unshift" : "push"](event);
   }
   
   _redact(redaction: Event) {

@@ -93,7 +93,7 @@ export default class Fetcher {
   
   // content
   async fetchUser(userId: string): Promise<api.UserData> {
-    return this.fetch(`/profile/${encode(userId)}`, {});
+    return this.fetchClient(`/profile/${encode(userId)}`, {});
   }
   
   async fetchMessages(roomId: string, options: { from?: string, direction?: "b" | "f", limit?: number } = {}): Promise<api.Messages> {
@@ -111,8 +111,12 @@ export default class Fetcher {
     return this.fetchClient(`/rooms/${encode(roomId)}/event/${encode(eventId)}`, {});
   }
   
-  async fetchMembers(roomId: string): Promise<{ chunk: Array<api.RawStateEvent> }> {
-    return this.fetchClient(`/rooms/${encode(roomId)}/members`, {});
+  async fetchMembers(roomId: string, membership: "join" | "leave" | "invite" | "knock" | "ban" | null = null): Promise<{ chunk: Array<api.RawStateEvent> }> {
+    if (membership) {
+      return this.fetchClient(`/rooms/${encode(roomId)}/members?membership=${encode(membership)}`, {});
+    } else {
+      return this.fetchClient(`/rooms/${encode(roomId)}/members?not_membership=leave`, {});
+    }
   }
   
   // async fetchUser(userId: string) {
