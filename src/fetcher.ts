@@ -12,11 +12,26 @@ const encode = encodeURIComponent;
 
 function stringifyQueryParams(query: { [name: string]: string | undefined }): string {
   const str = Object.entries(query)
-    .filter(([k, v]) => k && v)
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v!)}`)
+    .filter(([_, v]) => v)
+    .map(([k, v]) => `${encode(k)}=${encode(v!)}`)
     .join("&");
   if (!str) return "";
   return "?" + str;
+}
+
+function log(path: string, options: FetchOptions) {
+  const method = options.method ?? "GET";
+	console.log(`\x1b[3${getColor(method)}m${`[${method}]`.padEnd(9)}\x1b[0m ${path}`);
+  
+  function getColor(method: string) {
+    switch (method.toUpperCase()) {
+      case "GET":    return '4'; // blue
+      case "POST":   return '2'; // green
+      case "PUT":    return '3'; // yellow
+      case "DELETE": return '1'; // red
+      default:       return '5'; // purple (patch, head, options, etc)
+    }
+  }
 }
 
 export default class Fetcher {
@@ -30,6 +45,9 @@ export default class Fetcher {
   // fetching utility functions
   async fetchUnauth(path: string, options: FetchOptions): Promise<any> {
     const query = options.query ? stringifyQueryParams(options.query) : "";
+    
+    // debugging
+    if (false) log(`${this.baseUrl}/_matrix${path}${query}`, options);
     
     const res = await fetch(`${this.baseUrl}/_matrix${path}${query}`, {
       method: options.method ?? "GET",
@@ -97,31 +115,54 @@ export default class Fetcher {
   }
   
   async fetchMessages(roomId: string, options: { from?: string, direction?: "b" | "f", limit?: number } = {}): Promise<api.Messages> {
-    let qs = `limit=${options.limit || 200}&dir=${options.direction || "b"}`;
-    if (options?.from) qs += `&from=${encode(options.from)}`;
-    return this.fetchClient(`/rooms/${encode(roomId)}/messages?${qs}`, {});
+    return this.fetchClient(`/rooms/${encode(roomId)}/messages`, {
+      query: {
+        from: options.from,
+        dir: options.direction ?? "b",
+        limit: (options.limit ?? 200).toString(),
+      }
+    });
   }
 
   async fetchContext(roomId: string, eventId: string, limit = 200): Promise<api.Context> {
-    // it just feels wrong to dump json into the url path
-    return this.fetchClient(`/rooms/${encode(roomId)}/context/${encode(eventId)}?filter={"lazy_load_members":true}&limit=${limit}`, {});
+    return this.fetchClient(`/rooms/${encode(roomId)}/context/${encode(eventId)}`, {
+      query: {
+        limit: limit.toString(),
+        
+        // it just feels wrong to dump json into the url path
+        filter: '"{"lazy_load_members":true}',
+      },
+    });
   }
   
   async fetchEvent(roomId: string, eventId: string): Promise<api.RawEvent> {
     return this.fetchClient(`/rooms/${encode(roomId)}/event/${encode(eventId)}`, {});
   }
   
-  async fetchMembers(roomId: string, membership: "join" | "leave" | "invite" | "knock" | "ban" | null = null): Promise<{ chunk: Array<api.RawStateEvent> }> {
-    if (membership) {
-      return this.fetchClient(`/rooms/${encode(roomId)}/members?membership=${encode(membership)}`, {});
-    } else {
-      return this.fetchClient(`/rooms/${encode(roomId)}/members?not_membership=leave`, {});
-    }
+  async fetchRelations(roomId: string, eventId: string, options: { relType?: string, eventType?: string, from?: string, to?: string, limit?: number, dir?: "f" | "b" } = {}): Promise<api.Relations> {
+    const { eventType, relType } = options;
+    if (eventType && !relType) throw new Error("cannot have a eventType without relType");
+    let path = `/rooms/${encode(roomId)}/relations/${encode(eventId)}`;
+    if (relType) path += "/" + relType;
+    if (eventType) path += "/" + eventType;
+    return this.fetchClient(path, {
+      query: {
+        from: options.from,
+        to: options.to,
+        limit: (options.limit ?? 50).toString(),
+        // limit: (options.limit ?? 5).toString(),
+        dir: options.dir ?? "f",
+      }
+    });
   }
   
-  // async fetchUser(userId: string) {
-    // return this.fetchClient(`/profile/${encode(userId)}`, {});
-  // }
+  async fetchMembers(roomId: string, membership: "join" | "leave" | "invite" | "knock" | "ban" | null = null): Promise<{ chunk: Array<api.RawStateEvent> }> {
+    if (membership) {
+      return this.fetchClient(`/rooms/${encode(roomId)}/members`, { query: { membership }});
+    } else {
+      return this.fetchClient(`/rooms/${encode(roomId)}/members`, { query: { not_membership: "leave" }});
+    }
+  }
   
   async fetchState(roomId: string): Promise<Array<api.RawStateEvent>>;
   async fetchState(roomId: string, type?: string, stateKey?: string): Promise<api.RawStateEvent>;
@@ -135,21 +176,21 @@ export default class Fetcher {
     
   // events
   async sendEvent(roomId: string, type: string, content: any, txnId: string): Promise<{ event_id: string }> {
-    return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${txnId}`, { method: "PUT", body: content });
+    return this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${txnId}`, { method: "PUT", body: content });
   }
   
   async sendState(roomId: string, type: string, content: any, stateKey: string = ""): Promise<object> {
-    return await this.fetchClient(`/rooms/${encode(roomId)}/state/${encode(type)}/${stateKey}`, { method: "PUT", body: content });
+    return this.fetchClient(`/rooms/${encode(roomId)}/state/${encode(type)}/${stateKey}`, { method: "PUT", body: content });
   }
   
   // redact events
   async redactEvent(roomId: string, eventId: string, txnId: string, reason?: string): Promise<object> {
-    return await this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}/${encode(txnId)}`, { method: "PUT", body: reason ? { reason } : null });
+    return this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}/${encode(txnId)}`, { method: "PUT", body: reason ? { reason } : null });
   }
   
   // membership
   async kickMember(roomId: string, userId: string, reason?: string) {
-    return await this.fetchClient(`/rooms/${encode(roomId)}/kick`, {
+    return this.fetchClient(`/rooms/${encode(roomId)}/kick`, {
       method: "POST",
       body: {
         user_id: userId,
@@ -159,7 +200,7 @@ export default class Fetcher {
   }
   
   async banMember(roomId: string, userId: string, reason?: string) {
-    return await this.fetchClient(`/rooms/${encode(roomId)}/ban`, {
+    return this.fetchClient(`/rooms/${encode(roomId)}/ban`, {
       method: "POST",
       body: {
         user_id: userId,
@@ -169,7 +210,7 @@ export default class Fetcher {
   }
   
   async unbanMember(roomId: string, userId: string, reason?: string) {
-    return await this.fetchClient(`/rooms/${encode(roomId)}/unban`, {
+    return this.fetchClient(`/rooms/${encode(roomId)}/unban`, {
       method: "POST",
       body: {
         user_id: userId,
@@ -179,16 +220,29 @@ export default class Fetcher {
   }
   
   async joinRoom(roomId: string) {
-    return await this.fetchClient(`/rooms/${encode(roomId)}/join`, {
+    return this.fetchClient(`/rooms/${encode(roomId)}/join`, {
       method: "POST",
       body: {}
     });
   }
   
   async leaveRoom(roomId: string) {
-    return await this.fetchClient(`/rooms/${encode(roomId)}/leave`, {
+    return this.fetchClient(`/rooms/${encode(roomId)}/leave`, {
       method: "POST",
       body: {}
+    });
+  }
+  
+  async createRoom(options: api.CreateRoomOptions): Promise<{ room_id: string }> {
+    return this.fetchClient(`/createRoom`, {
+      method: "POST",
+      body: options
+    });
+  }
+  
+  async fetchPublicRooms(options: { since?: string, server?: string, limit?: number }): Promise<api.PublicRooms> {
+    return this.fetchClient(`/publicRooms`, {
+      query: { ...options, limit: (options.limit ?? 50).toString() }
     });
   }
 }

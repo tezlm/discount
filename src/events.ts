@@ -3,6 +3,28 @@ import type Room from "./room";
 import { Event, StateEvent, Relation } from "./event";
 import Timeline from "./timeline";
 
+function parseRelations(event: Event): Array<{ relType: string, eventId: string, key?: string, fallback: boolean }> {
+  const cont = event.content["m.relates_to"];
+  if (!cont) return [];
+  const relations = [];
+  if (cont["m.in_reply_to"]) {
+    relations.push({
+      relType: "m.in_reply_to",
+      eventId: cont["m.in_reply_to"].event_id,
+      fallback: cont.is_falling_back
+    });
+  }
+  if (cont.rel_type) {
+    relations.push({
+      relType: cont.rel_type,
+      eventId: cont.event_id,
+      key: cont.key,
+      fallback: false,
+    });
+  }
+  return relations;
+}
+
 export default class Events extends Map<string, Event> {
   public client: Client;
   public live: Timeline | null = null;
@@ -12,6 +34,31 @@ export default class Events extends Map<string, Event> {
   constructor(public room: Room) {
     super();
     this.client = room.client;
+  }
+  
+  _handleEvent(event: Event, toBeginning = false) {
+    const relQueue = this._queuedRelations;
+    
+    // queue outgoing relations
+    for (let { eventId, relType, key, fallback } of parseRelations(event)) {
+      const rel = { event, relType, key, fallback };
+      if (this.has(eventId)) {
+        this.get(eventId)!._handleRelation(rel, toBeginning);
+      } else if (relQueue.has(eventId)) {
+        relQueue.get(eventId)![toBeginning ? "unshift" : "push"](rel);
+      } else {
+        relQueue.set(eventId, [rel]);
+      }
+    }
+    
+    // parse incoming relations
+    if (relQueue.has(event.id)) {
+      for (let rel of relQueue.get(event.id)!) {
+        event._handleRelation(rel);
+      }
+    }
+
+    this.set(event.id, event);
   }
   
   async fetch(eventId: string): Promise<Event> {

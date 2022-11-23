@@ -1,0 +1,717 @@
+diff --git a/src/api.ts b/src/api.ts
+index ef01721..eb85103 100644
+--- a/src/api.ts
++++ b/src/api.ts
+@@ -131,3 +131,44 @@ export interface Context {
+   events_after: Array<RawEvent>,
+   state: Array<RawStateEvent>,
+ }
++
++export interface Relations {
++  chunk: Array<RawEvent>,
++  next_batch: string,
++  prev_batch: string,
++}
++
++export interface CreateRoomOptions {
++  creation_content?: { [key: string]: any },
++  initial_state?: Array<{ type: string, state_key: string, content: any }>,
++  invite?: Array<string>,
++  // invite_3pid?: no for now,
++  is_direct?: boolean,
++  name?: string,
++  power_level_content_override?: object,
++  preset?: "private_chat" | "public_chat" | "trusted_private_chat",
++  room_alias_name?: string,
++  room_version?: string,
++  topic?: string,
++  visibility?: "public" | "private",
++}
++
++export interface PublicRoom {
++  avatar_url: string,
++  canonical_alias: string,
++  guest_can_join: boolean,
++  join_rule: string,
++  name: string,
++  num_joined_members: number,
++  room_id: string,
++  room_type: string,
++  topic: string,
++  world_readable: boolean,
++}
++
++export interface PublicRooms {
++  chunk: Array<PublicRoom>,
++  next_batch: string,
++  prev_batch: string,
++  total_room_count_estimate: number,
++}
+diff --git a/src/client.ts b/src/client.ts
+index 003b567..4345882 100644
+--- a/src/client.ts
++++ b/src/client.ts
+@@ -3,6 +3,7 @@ import Fetcher from "./fetcher";
+ import type * as api from "./api";
+ 
+ import Users from "./users";
++import Rooms from "./rooms";
+ import Room from "./room";
+ import Invite from "./invite";
+ import Timeline from "./timeline";
+@@ -71,7 +72,7 @@ export default class Client extends Emitter<ClientEvents> {
+   public fetcher: Fetcher;
+   public userId: string;
+   public users = new Users(this);
+-  public rooms = new Map<string, Room>();
++  public rooms = new Rooms(this);
+   public invites = new Map<string, Invite>();
+   public accountData = new Map<string, any>();
+   public _transactions = new Map<string, LocalEvent>();
+diff --git a/src/event.ts b/src/event.ts
+index 9126897..f9a22bb 100644
+--- a/src/event.ts
++++ b/src/event.ts
+@@ -2,6 +2,7 @@ import type Room from "./room";
+ import type Member from "./member";
+ import type Client from "./client";
+ import type { RawEvent, RawStateEvent, RawEphemeralEvent } from "./api";
++import Relations from "./relations";
+ import { intern } from "./util";
+ 
+ export interface RawLocalEvent {
+@@ -89,6 +90,11 @@ export class Event<RawType extends RawEvent = RawEvent> {
+     }
+   }
+   
++  async fetchRelations(relType?: string, eventType?: string) {
++    const fetched = await this.client.fetcher.fetchRelations(this.room.id, this.id, { relType, eventType });
++    return new Relations(this, fetched, { relType, eventType });
++  }
++  
+   get sender(): Member | { id: string } {
+     const member = this.room.members.get(this.raw.sender);
+     if (!member) {
+diff --git a/src/events.ts b/src/events.ts
+index 91acacc..b42e701 100644
+--- a/src/events.ts
++++ b/src/events.ts
+@@ -3,6 +3,28 @@ import type Room from "./room";
+ import { Event, StateEvent, Relation } from "./event";
+ import Timeline from "./timeline";
+ 
++function parseRelations(event: Event): Array<{ relType: string, eventId: string, key?: string, fallback: boolean }> {
++  const cont = event.content["m.relates_to"];
++  if (!cont) return [];
++  const relations = [];
++  if (cont["m.in_reply_to"]) {
++    relations.push({
++      relType: "m.in_reply_to",
++      eventId: cont["m.in_reply_to"].event_id,
++      fallback: cont.is_falling_back
++    });
++  }
++  if (cont.rel_type) {
++    relations.push({
++      relType: cont.rel_type,
++      eventId: cont.event_id,
++      key: cont.key,
++      fallback: false,
++    });
++  }
++  return relations;
++}
++
+ export default class Events extends Map<string, Event> {
+   public client: Client;
+   public live: Timeline | null = null;
+@@ -14,6 +36,31 @@ export default class Events extends Map<string, Event> {
+     this.client = room.client;
+   }
+   
++  _handleEvent(event: Event, toBeginning = false) {
++    const relQueue = this._queuedRelations;
++    
++    // queue outgoing relations
++    for (let { eventId, relType, key, fallback } of parseRelations(event)) {
++      const rel = { event, relType, key, fallback };
++      if (this.has(eventId)) {
++        this.get(eventId)!._handleRelation(rel, toBeginning);
++      } else if (relQueue.has(eventId)) {
++        relQueue.get(eventId)![toBeginning ? "unshift" : "push"](rel);
++      } else {
++        relQueue.set(eventId, [rel]);
++      }
++    }
++    
++    // parse incoming relations
++    if (relQueue.has(event.id)) {
++      for (let rel of relQueue.get(event.id)!) {
++        event._handleRelation(rel);
++      }
++    }
++
++    this.set(event.id, event);
++  }
++  
+   async fetch(eventId: string): Promise<Event> {
+     if (this.has(eventId)) return this.get(eventId)!;
+     const raw = await this.client.fetcher.fetchEvent(this.room.id, eventId);
+diff --git a/src/fetcher.ts b/src/fetcher.ts
+index 3e363c9..8b7adb7 100644
+--- a/src/fetcher.ts
++++ b/src/fetcher.ts
+@@ -12,13 +12,28 @@ const encode = encodeURIComponent;
+ 
+ function stringifyQueryParams(query: { [name: string]: string | undefined }): string {
+   const str = Object.entries(query)
+-    .filter(([k, v]) => k && v)
+-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v!)}`)
++    .filter(([_, v]) => v)
++    .map(([k, v]) => `${encode(k)}=${encode(v!)}`)
+     .join("&");
+   if (!str) return "";
+   return "?" + str;
+ }
+ 
++function log(path: string, options: FetchOptions) {
++  const method = options.method ?? "GET";
++	console.log(`\x1b[3${getColor(method)}m${`[${method}]`.padEnd(9)}\x1b[0m ${path}`);
++  
++  function getColor(method: string) {
++    switch (method.toUpperCase()) {
++      case "GET":    return '4'; // blue
++      case "POST":   return '2'; // green
++      case "PUT":    return '3'; // yellow
++      case "DELETE": return '1'; // red
++      default:       return '5'; // purple (patch, head, options, etc)
++    }
++  }
++}
++
+ export default class Fetcher {
+   public filter?: string;
+   
+@@ -31,6 +46,9 @@ export default class Fetcher {
+   async fetchUnauth(path: string, options: FetchOptions): Promise<any> {
+     const query = options.query ? stringifyQueryParams(options.query) : "";
+     
++    // debugging
++    if (false) log(`${this.baseUrl}/_matrix${path}${query}`, options);
++    
+     const res = await fetch(`${this.baseUrl}/_matrix${path}${query}`, {
+       method: options.method ?? "GET",
+       headers: options.headers,
+@@ -97,32 +115,55 @@ export default class Fetcher {
+   }
+   
+   async fetchMessages(roomId: string, options: { from?: string, direction?: "b" | "f", limit?: number } = {}): Promise<api.Messages> {
+-    let qs = `limit=${options.limit || 200}&dir=${options.direction || "b"}`;
+-    if (options?.from) qs += `&from=${encode(options.from)}`;
+-    return this.fetchClient(`/rooms/${encode(roomId)}/messages?${qs}`, {});
++    return this.fetchClient(`/rooms/${encode(roomId)}/messages`, {
++      query: {
++        from: options.from,
++        dir: options.direction ?? "b",
++        limit: (options.limit ?? 200).toString(),
++      }
++    });
+   }
+ 
+   async fetchContext(roomId: string, eventId: string, limit = 200): Promise<api.Context> {
+-    // it just feels wrong to dump json into the url path
+-    return this.fetchClient(`/rooms/${encode(roomId)}/context/${encode(eventId)}?filter={"lazy_load_members":true}&limit=${limit}`, {});
++    return this.fetchClient(`/rooms/${encode(roomId)}/context/${encode(eventId)}`, {
++      query: {
++        limit: limit.toString(),
++        
++        // it just feels wrong to dump json into the url path
++        filter: '"{"lazy_load_members":true}',
++      },
++    });
+   }
+   
+   async fetchEvent(roomId: string, eventId: string): Promise<api.RawEvent> {
+     return this.fetchClient(`/rooms/${encode(roomId)}/event/${encode(eventId)}`, {});
+   }
+   
++  async fetchRelations(roomId: string, eventId: string, options: { relType?: string, eventType?: string, from?: string, to?: string, limit?: number, dir?: "f" | "b" } = {}): Promise<api.Relations> {
++    const { eventType, relType } = options;
++    if (eventType && !relType) throw new Error("cannot have a eventType without relType");
++    let path = `/rooms/${encode(roomId)}/relations/${encode(eventId)}`;
++    if (relType) path += "/" + relType;
++    if (eventType) path += "/" + eventType;
++    return this.fetchClient(path, {
++      query: {
++        from: options.from,
++        to: options.to,
++        limit: (options.limit ?? 50).toString(),
++        // limit: (options.limit ?? 5).toString(),
++        dir: options.dir ?? "f",
++      }
++    });
++  }
++  
+   async fetchMembers(roomId: string, membership: "join" | "leave" | "invite" | "knock" | "ban" | null = null): Promise<{ chunk: Array<api.RawStateEvent> }> {
+     if (membership) {
+-      return this.fetchClient(`/rooms/${encode(roomId)}/members?membership=${encode(membership)}`, {});
++      return this.fetchClient(`/rooms/${encode(roomId)}/members`, { query: { membership }});
+     } else {
+-      return this.fetchClient(`/rooms/${encode(roomId)}/members?not_membership=leave`, {});
++      return this.fetchClient(`/rooms/${encode(roomId)}/members`, { query: { not_membership: "leave" }});
+     }
+   }
+   
+-  // async fetchUser(userId: string) {
+-    // return this.fetchClient(`/profile/${encode(userId)}`, {});
+-  // }
+-  
+   async fetchState(roomId: string): Promise<Array<api.RawStateEvent>>;
+   async fetchState(roomId: string, type?: string, stateKey?: string): Promise<api.RawStateEvent>;
+   async fetchState(roomId: string, type?: string, stateKey = ""): Promise<api.RawStateEvent | Array<api.RawStateEvent>> {
+@@ -135,21 +176,21 @@ export default class Fetcher {
+     
+   // events
+   async sendEvent(roomId: string, type: string, content: any, txnId: string): Promise<{ event_id: string }> {
+-    return await this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${txnId}`, { method: "PUT", body: content });
++    return this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${txnId}`, { method: "PUT", body: content });
+   }
+   
+   async sendState(roomId: string, type: string, content: any, stateKey: string = ""): Promise<object> {
+-    return await this.fetchClient(`/rooms/${encode(roomId)}/state/${encode(type)}/${stateKey}`, { method: "PUT", body: content });
++    return this.fetchClient(`/rooms/${encode(roomId)}/state/${encode(type)}/${stateKey}`, { method: "PUT", body: content });
+   }
+   
+   // redact events
+   async redactEvent(roomId: string, eventId: string, txnId: string, reason?: string): Promise<object> {
+-    return await this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}/${encode(txnId)}`, { method: "PUT", body: reason ? { reason } : null });
++    return this.fetchClient(`/rooms/${encode(roomId)}/redact/${encode(eventId)}/${encode(txnId)}`, { method: "PUT", body: reason ? { reason } : null });
+   }
+   
+   // membership
+   async kickMember(roomId: string, userId: string, reason?: string) {
+-    return await this.fetchClient(`/rooms/${encode(roomId)}/kick`, {
++    return this.fetchClient(`/rooms/${encode(roomId)}/kick`, {
+       method: "POST",
+       body: {
+         user_id: userId,
+@@ -159,7 +200,7 @@ export default class Fetcher {
+   }
+   
+   async banMember(roomId: string, userId: string, reason?: string) {
+-    return await this.fetchClient(`/rooms/${encode(roomId)}/ban`, {
++    return this.fetchClient(`/rooms/${encode(roomId)}/ban`, {
+       method: "POST",
+       body: {
+         user_id: userId,
+@@ -169,7 +210,7 @@ export default class Fetcher {
+   }
+   
+   async unbanMember(roomId: string, userId: string, reason?: string) {
+-    return await this.fetchClient(`/rooms/${encode(roomId)}/unban`, {
++    return this.fetchClient(`/rooms/${encode(roomId)}/unban`, {
+       method: "POST",
+       body: {
+         user_id: userId,
+@@ -179,16 +220,29 @@ export default class Fetcher {
+   }
+   
+   async joinRoom(roomId: string) {
+-    return await this.fetchClient(`/rooms/${encode(roomId)}/join`, {
++    return this.fetchClient(`/rooms/${encode(roomId)}/join`, {
+       method: "POST",
+       body: {}
+     });
+   }
+   
+   async leaveRoom(roomId: string) {
+-    return await this.fetchClient(`/rooms/${encode(roomId)}/leave`, {
++    return this.fetchClient(`/rooms/${encode(roomId)}/leave`, {
+       method: "POST",
+       body: {}
+     });
+   }
++  
++  async createRoom(options: api.CreateRoomOptions): Promise<{ room_id: string }> {
++    return this.fetchClient(`/createRoom`, {
++      method: "POST",
++      body: options
++    });
++  }
++  
++  async fetchPublicRooms(options: { since?: string, server?: string, limit?: number }): Promise<api.PublicRooms> {
++    return this.fetchClient(`/publicRooms`, {
++      query: { ...options, limit: (options.limit ?? 50).toString() }
++    });
++  }
+ }
+diff --git a/src/members.ts b/src/members.ts
+index 6260402..41d2524 100644
+--- a/src/members.ts
++++ b/src/members.ts
+@@ -26,9 +26,9 @@ export default class Members extends Map<string, Member> {
+   async fetch(memberId: string, skipCache = false): Promise<Member | null> {
+     if (this.has(memberId) && !skipCache) return this.get(memberId) ?? null;
+     if (this.requests.has(memberId)) return this.requests.get(memberId);
+-    const raw = await this.client.fetcher.fetchState(this.room.id, "m.room.member", memberId);
+-    const event = new StateEvent(this.room, raw);
+-    this.room.handleState(event);
++    const promise = this.room.fetchState("m.room.member", memberId, skipCache);
++    this.requests.set(memberId, promise);
++    await promise;
+     return this.get(memberId) ?? null;
+   }
+   
+diff --git a/src/paginator.ts b/src/paginator.ts
+new file mode 100644
+index 000000000..468ebc6
+--- /dev/null
++++ b/src/paginator.ts
+@@ -0,0 +1,32 @@
++/*
++export interface Chunk<T> {
++  chunk: Array<T>,
++  next_batch: string,
++}
++
++export default abstract class Paginator<T> extends Array<T> {
++  private nextBatch: string | undefined;
++  
++  constructor(chunk: Chunk) {
++    super();
++    this.nextBatch = chunk.next_batch;
++    for (let item of chunk.chunk) this.push(item);
++  }
++  
++  abstract next(): Promise<Array<T>>;
++  
++  async *[Symbol.asyncIterator]() {
++    for (let item of this) yield item;
++    let fetched;
++    do {
++      fetched = await this.next();
++      for (let item of fetched) yield item;
++    } while(fetched.length);
++  }
++  
++  async all() {
++    while ((await this.next()).length);
++    return this;
++  }
++}
++*/
+diff --git a/src/public-rooms.ts b/src/public-rooms.ts
+new file mode 100644
+index 000000000..8482c96
+--- /dev/null
++++ b/src/public-rooms.ts
+@@ -0,0 +1,84 @@
++import type Client from "./client";
++import type * as api from "./api";
++
++class PublicRoom {
++  public id: string;
++  public type: string;
++  
++  public avatar: string;
++  public alias: string;
++  public name: string;
++  public topic: string;
++  
++  public joinRule: string;
++  public guestJoinable: boolean;
++  public isWorldReadable: boolean;
++  public memberCount: number;
++  
++  constructor(public client: Client, data: api.PublicRoom) {
++    this.id = data.room_id;
++    this.type = data.room_type;
++    this.avatar = data.avatar_url;
++    this.alias = data.canonical_alias;
++    this.name = data.name;
++    this.topic = data.topic;
++    this.joinRule = data.join_rule;
++    this.guestJoinable = data.guest_can_join;
++    this.isWorldReadable = data.world_readable;
++    this.memberCount = data.num_joined_members;
++  }
++  
++  async join() {
++    
++  }
++}
++
++export default class Rooms extends Array<PublicRoom> {
++  private nextBatch: string;
++  public server: string | undefined;
++  public totalCount: number;
++  
++  constructor(public client: Client, chunk: api.PublicRooms, server?: string) {
++    super();
++    this.totalCount = chunk.total_room_count_estimate;
++    this.nextBatch = chunk.next_batch;
++    this.server = server;
++    
++    for (let raw of chunk.chunk) {
++      this.push(new PublicRoom(client, raw));
++    }    
++  }
++  
++  async next(): Promise<Array<PublicRoom>> {
++    const chunk = await this.client.fetcher.fetchPublicRooms({
++      since: this.nextBatch,
++      server: this.server,
++    });
++    
++    this.totalCount = chunk.total_room_count_estimate;
++    this.nextBatch = chunk.next_batch;
++    
++    const arr = [];
++    for (let raw of chunk.chunk) {
++      arr.push(new PublicRoom(this.client, raw));
++    }
++    
++    this.push(...arr);
++    
++    return arr;
++  }
++  
++  async *[Symbol.asyncIterator]() {
++    for (let item of this) yield item;
++    let fetched;
++    do {
++      fetched = await this.next();
++      for (let item of fetched) yield item;
++    } while(fetched.length);
++  }
++  
++  async all() {
++    while ((await this.next()).length);
++    return this;
++  }
++}
+diff --git a/src/relations.ts b/src/relations.ts
+new file mode 100644
+index 000000000..592ad0d
+--- /dev/null
++++ b/src/relations.ts
+@@ -0,0 +1,55 @@
++import { Event, Relation } from "./event"
++import type * as api from "./api";
++
++export default class Relations extends Array<Relation> {
++  private nextBatch: string;
++  private relType: string | undefined;
++  private eventType: string | undefined;
++  
++  constructor(public event: Event, chunk: api.Relations, options: { relType?: string, eventType?: string }) {
++    super();
++    const { room } = this.event;
++    for (let raw of chunk.chunk) {
++      const event = new Event(room, raw);
++      room.events._handleEvent(event);
++    }
++    for (let rel of this.event.relationsOut ?? []) this.push(rel);
++    this.nextBatch = chunk.next_batch;
++    this.relType = options.relType;
++    this.eventType = options.eventType;
++  }
++  
++  async next(): Promise<Array<Relation>> {
++    const { room, client } = this.event;
++    const chunk = await client.fetcher.fetchRelations(room.id, this.event.id, {
++      relType: this.relType,
++      eventType: this.eventType,
++      from: this.nextBatch,
++    });
++    
++    let count = 0;
++    for (let raw of chunk.chunk) {
++      const event = new Event(room, raw);
++      room.events._handleEvent(event);
++      count++;
++    }
++    
++    const relations = this.event.relationsOut?.slice(-count) ?? [];
++    for (let rel of relations) this.push(rel);
++    return relations;
++  }
++  
++  async *[Symbol.asyncIterator]() {
++    for (let item of this) yield item;
++    let fetched;
++    do {
++      fetched = await this.next();
++      for (let item of fetched) yield item;
++    } while(fetched.length);
++  }
++  
++  async all() {
++    while ((await this.next()).length);
++    return this;
++  }
++}
+diff --git a/src/room.ts b/src/room.ts
+index 247b743..0a9343d 100644
+--- a/src/room.ts
++++ b/src/room.ts
+@@ -32,8 +32,8 @@ export default class Room {
+     this.events = new Events(this);
+   }
+   
+-  getState(type: string, key = ""): StateEvent | undefined {
+-    return this.state.find(i => i.type === type && i.stateKey === key);
++  getState(type: string, stateKey = ""): StateEvent | undefined {
++    return this.state.find(i => i.type === type && i.stateKey === stateKey);
+   }
+   
+   getAllState(type: string): Array<StateEvent> {
+@@ -53,11 +53,19 @@ export default class Room {
+       case "m.room.create":       this.type = event.content.type   ?? null; break;
+       case "m.room.join_rules":   this.joinRule = event.content?.join_rule ?? "invite"; break;
+       case "m.room.power_levels": this.power._setLevels(event.content); break;
+-      case "m.room.member":       this.members._handle(event);
++      case "m.room.member":       this.members._handle(event); break;
+     }
+     
+     this.state.push(event);
+-  }  
++  }
++  
++  async fetchState(type: string, stateKey = "", skipCache = false): Promise<StateEvent> {
++    const existing = this.getState(type, stateKey);
++    if (!skipCache && existing) return existing;
++    const event = new StateEvent(this, await this.client.fetcher.fetchState(this.id, type, stateKey));
++    this.handleState(event);
++    return event;
++  }
+   
+   async sendEvent(type: string, content: any, txnId = "~" + Math.random().toString(36)) {
+     const ev = new LocalEvent(this, { type, content }, txnId);
+diff --git a/src/rooms.ts b/src/rooms.ts
+new file mode 100644
+index 000000000..e3dc8ad
+--- /dev/null
++++ b/src/rooms.ts
+@@ -0,0 +1,58 @@
++import type Client from "./client";
++import type Room from "./room";
++
++interface RoomCreateOptions {
++  creationContent?: { [key: string]: any },
++  initialState?: Array<{ type: string, stateKey: string, content: any }>,
++  invite: Array<string>,
++  isDirect?: boolean,
++  isInDirectory?: boolean,
++  name?: string,
++  powerLevelOverrides?: any,
++  preset?: "private_chat" | "public_chat" | "trusted_private_chat",
++  roomAlias?: string,
++  roomVersion?: string,
++  topic?: string,
++}
++
++export default class Rooms extends Map<string, Room> {
++  constructor(
++    public client: Client,
++  ) { super() }
++  
++  // hacky code go brrrr
++  async create(options: RoomCreateOptions): Promise<Room> {
++    let done: (room: Room) => void, room_id: string;
++    const promise: Promise<Room> = new Promise((res) => done = res);
++    
++    const listen = () => {
++      this.client.once("join", (room) => {
++        if (room.id === room_id) {
++          done(room);
++        } else {
++          listen();
++        }
++      });
++    }
++    
++    listen();
++    
++    ({ room_id } = await this.client.fetcher.createRoom({
++      creation_content: options.creationContent,
++      initial_state: options.initialState?.map(i => ({ type: i.type, state_key: i.stateKey, content: i.content })),
++      invite: options.invite,
++      is_direct: options.isDirect,
++      name: options.name,
++      power_level_content_override: options.powerLevelOverrides,
++      preset: options.preset,
++      room_alias_name: options.roomAlias,
++      room_version: options.roomVersion,
++      topic: options.topic,
++      visibility: options.isInDirectory === true ? "public"
++        : options.isInDirectory === false ? "private"
++        : undefined,
++    }));
++    
++    return promise;
++  }
++}
+diff --git a/src/timeline.ts b/src/timeline.ts
+index b274e1a..a37a04f 100644
+--- a/src/timeline.ts
++++ b/src/timeline.ts
+@@ -4,28 +4,6 @@ import type Events from "./events";
+ import type * as api from "./api";
+ import { Event, StateEvent } from "./event";
+ 
+-function getRelations(event: Event): Array<{ relType: string, eventId: string, key?: string, fallback: boolean }> {
+-  const cont = event.content["m.relates_to"];
+-  if (!cont) return [];
+-  const relations = [];
+-  if (cont["m.in_reply_to"]) {
+-    relations.push({
+-      relType: "m.in_reply_to",
+-      eventId: cont["m.in_reply_to"].event_id,
+-      fallback: cont.is_falling_back
+-    });
+-  }
+-  if (cont.rel_type) {
+-    relations.push({
+-      relType: cont.rel_type,
+-      eventId: cont.event_id,
+-      key: cont.key,
+-      fallback: false,
+-    });
+-  }
+-  return relations;
+-}
+-
+ export default class Timeline extends Array {
+   public client: Client;
+   private events: Events;
+@@ -90,28 +68,7 @@ export default class Timeline extends Array {
+   // }
+ 
+   _add(event: Event, toBeginning = false) {
+-    const relQueue = this.events._queuedRelations;
+-    
+-    // queue outgoing relations
+-    for (let { eventId, relType, key, fallback } of getRelations(event)) {
+-      const rel = { event, relType, key, fallback };
+-      if (this.events.has(eventId)) {
+-        this.events.get(eventId)!._handleRelation(rel, toBeginning);
+-      } else if (relQueue.has(eventId)) {
+-        relQueue.get(eventId)![toBeginning ? "unshift" : "push"](rel);
+-      } else {
+-        relQueue.set(eventId, [rel]);
+-      }
+-    }
+-    
+-    // parse incoming relations
+-    if (relQueue.has(event.id)) {
+-      for (let rel of relQueue.get(event.id)!) {
+-        event._handleRelation(rel);
+-      }
+-    }
+-
+-    this.events.set(event.id, event);
++    this.events._handleEvent(event, toBeginning);
+     this[toBeginning ? "unshift" : "push"](event);
+   }
+   

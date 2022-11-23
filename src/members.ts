@@ -26,9 +26,9 @@ export default class Members extends Map<string, Member> {
   async fetch(memberId: string, skipCache = false): Promise<Member | null> {
     if (this.has(memberId) && !skipCache) return this.get(memberId) ?? null;
     if (this.requests.has(memberId)) return this.requests.get(memberId);
-    const raw = await this.client.fetcher.fetchState(this.room.id, "m.room.member", memberId);
-    const event = new StateEvent(this.room, raw);
-    this.room.handleState(event);
+    const promise = this.room.fetchState("m.room.member", memberId, skipCache);
+    this.requests.set(memberId, promise);
+    await promise;
     return this.get(memberId) ?? null;
   }
   

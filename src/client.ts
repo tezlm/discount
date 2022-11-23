@@ -3,6 +3,7 @@ import Fetcher from "./fetcher";
 import type * as api from "./api";
 
 import Users from "./users";
+import Rooms from "./rooms";
 import Room from "./room";
 import Invite from "./invite";
 import Timeline from "./timeline";
@@ -71,7 +72,7 @@ export default class Client extends Emitter<ClientEvents> {
   public fetcher: Fetcher;
   public userId: string;
   public users = new Users(this);
-  public rooms = new Map<string, Room>();
+  public rooms = new Rooms(this);
   public invites = new Map<string, Invite>();
   public accountData = new Map<string, any>();
   public _transactions = new Map<string, LocalEvent>();

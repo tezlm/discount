@@ -131,3 +131,44 @@ export interface Context {
   events_after: Array<RawEvent>,
   state: Array<RawStateEvent>,
 }
+
+export interface Relations {
+  chunk: Array<RawEvent>,
+  next_batch: string,
+  prev_batch: string,
+}
+
+export interface CreateRoomOptions {
+  creation_content?: { [key: string]: any },
+  initial_state?: Array<{ type: string, state_key: string, content: any }>,
+  invite?: Array<string>,
+  // invite_3pid?: no for now,
+  is_direct?: boolean,
+  name?: string,
+  power_level_content_override?: object,
+  preset?: "private_chat" | "public_chat" | "trusted_private_chat",
+  room_alias_name?: string,
+  room_version?: string,
+  topic?: string,
+  visibility?: "public" | "private",
+}
+
+export interface PublicRoom {
+  avatar_url: string,
+  canonical_alias: string,
+  guest_can_join: boolean,
+  join_rule: string,
+  name: string,
+  num_joined_members: number,
+  room_id: string,
+  room_type: string,
+  topic: string,
+  world_readable: boolean,
+}
+
+export interface PublicRooms {
+  chunk: Array<PublicRoom>,
+  next_batch: string,
+  prev_batch: string,
+  total_room_count_estimate: number,
+}

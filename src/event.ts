@@ -2,6 +2,7 @@ import type Room from "./room";
 import type Member from "./member";
 import type Client from "./client";
 import type { RawEvent, RawStateEvent, RawEphemeralEvent } from "./api";
+import Relations from "./relations";
 import { intern } from "./util";
 
 export interface RawLocalEvent {
@@ -87,6 +88,11 @@ export class Event<RawType extends RawEvent = RawEvent> {
         if (relType === "m.annotation") this._reactionsCache = null;
       }
     }
+  }
+  
+  async fetchRelations(relType?: string, eventType?: string) {
+    const fetched = await this.client.fetcher.fetchRelations(this.room.id, this.id, { relType, eventType });
+    return new Relations(this, fetched, { relType, eventType });
   }
   
   get sender(): Member | { id: string } {

@@ -4,28 +4,6 @@ import type Events from "./events";
 import type * as api from "./api";
 import { Event, StateEvent } from "./event";
 
-function getRelations(event: Event): Array<{ relType: string, eventId: string, key?: string, fallback: boolean }> {
-  const cont = event.content["m.relates_to"];
-  if (!cont) return [];
-  const relations = [];
-  if (cont["m.in_reply_to"]) {
-    relations.push({
-      relType: "m.in_reply_to",
-      eventId: cont["m.in_reply_to"].event_id,
-      fallback: cont.is_falling_back
-    });
-  }
-  if (cont.rel_type) {
-    relations.push({
-      relType: cont.rel_type,
-      eventId: cont.event_id,
-      key: cont.key,
-      fallback: false,
-    });
-  }
-  return relations;
-}
-
 export default class Timeline extends Array {
   public client: Client;
   private events: Events;
@@ -90,28 +68,7 @@ export default class Timeline extends Array {
   // }
 
   _add(event: Event, toBeginning = false) {
-    const relQueue = this.events._queuedRelations;
-    
-    // queue outgoing relations
-    for (let { eventId, relType, key, fallback } of getRelations(event)) {
-      const rel = { event, relType, key, fallback };
-      if (this.events.has(eventId)) {
-        this.events.get(eventId)!._handleRelation(rel, toBeginning);
-      } else if (relQueue.has(eventId)) {
-        relQueue.get(eventId)![toBeginning ? "unshift" : "push"](rel);
-      } else {
-        relQueue.set(eventId, [rel]);
-      }
-    }
-    
-    // parse incoming relations
-    if (relQueue.has(event.id)) {
-      for (let rel of relQueue.get(event.id)!) {
-        event._handleRelation(rel);
-      }
-    }
-
-    this.events.set(event.id, event);
+    this.events._handleEvent(event, toBeginning);
     this[toBeginning ? "unshift" : "push"](event);
   }
   

@@ -32,8 +32,8 @@ export default class Room {
     this.events = new Events(this);
   }
   
-  getState(type: string, key = ""): StateEvent | undefined {
-    return this.state.find(i => i.type === type && i.stateKey === key);
+  getState(type: string, stateKey = ""): StateEvent | undefined {
+    return this.state.find(i => i.type === type && i.stateKey === stateKey);
   }
   
   getAllState(type: string): Array<StateEvent> {
@@ -53,11 +53,19 @@ export default class Room {
       case "m.room.create":       this.type = event.content.type   ?? null; break;
       case "m.room.join_rules":   this.joinRule = event.content?.join_rule ?? "invite"; break;
       case "m.room.power_levels": this.power._setLevels(event.content); break;
-      case "m.room.member":       this.members._handle(event);
+      case "m.room.member":       this.members._handle(event); break;
     }
     
     this.state.push(event);
-  }  
+  }
+  
+  async fetchState(type: string, stateKey = "", skipCache = false): Promise<StateEvent> {
+    const existing = this.getState(type, stateKey);
+    if (!skipCache && existing) return existing;
+    const event = new StateEvent(this, await this.client.fetcher.fetchState(this.id, type, stateKey));
+    this.handleState(event);
+    return event;
+  }
   
   async sendEvent(type: string, content: any, txnId = "~" + Math.random().toString(36)) {
     const ev = new LocalEvent(this, { type, content }, txnId);
