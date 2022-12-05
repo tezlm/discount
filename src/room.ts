@@ -19,6 +19,7 @@ export default class Room {
   public events: Events;
   public accountData: Map<string, any> = new Map();
   public notifications = { unread: 0, highlight: 0 };
+  public summary = { joined: 0, invited: 0 };
 
     // TEMP: event.live may be null and discard needs to be able to mark as read, so this exists for now
   public TEMPlastEventId?: string;

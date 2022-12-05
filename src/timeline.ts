@@ -69,6 +69,8 @@ export default class Timeline extends Array {
 
   _add(event: Event, toBeginning = false) {
     this.events._handleEvent(event, toBeginning);
+    if (event.type === "m.reaction") return;
+    if (event.content["m.relates_to"]?.rel_type === "m.replace") return;
     this[toBeginning ? "unshift" : "push"](event);
   }
   

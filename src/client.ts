@@ -18,7 +18,8 @@ interface StatePersist {
     state: Array<api.RawStateEvent>,
     accountData: Array<{ type: string, content: any }>,
     TEMPlastEventId: string,
-    notifications: { unread: 0, highlight: 0 },
+    notifications: { unread: number, highlight: number },
+    summary: { joined: number, invited: number },
   },
   invites: {
     state: Array<api.RawStateEvent>,
@@ -64,7 +65,8 @@ type ClientEvents = {
   remoteEcho:      (echo: LocalEvent, txnId: string) => void,
   accountData:     (event: api.AccountData) => void,
   roomAccountData: (room: Room, event: api.AccountData) => void,
-  notifications:   (room: Room, events: { unread: number, highlight: number }) => void,
+  notifications:   (room: Room, notifs: { unread: number, highlight: number }) => void,
+  summary:         (room: Room, summary: { joined: number, invited: number }) => void,
 }
 
 export default class Client extends Emitter<ClientEvents> {
@@ -221,6 +223,14 @@ export default class Client extends Emitter<ClientEvents> {
           room.notifications = notifs;
           this.emit("notifications", room, notifs);
         }
+
+        if (data.summary) {
+          dirty = true;
+          const apisum = data.summary;
+          const summary = { joined: apisum["m.joined_member_count"], invited: apisum["m.invited_member_count"] };
+          room.summary = summary;
+          this.emit("summary", room, summary);
+        }
       }
 
       for (let id in r.invite ?? {}) {
@@ -267,6 +277,7 @@ export default class Client extends Emitter<ClientEvents> {
         accountData: [...room.accountData].map(([type, content]) => ({ type, content })),
         TEMPlastEventId: room.events.live?.at(-1)?.id ?? room.TEMPlastEventId,
         notifications: room.notifications,
+        summary: room.summary,
       });
     }
     
@@ -305,7 +316,7 @@ export default class Client extends Emitter<ClientEvents> {
             
       this.fetcher.filter = filterId;
     }
-    
+
     await this.persister.open(["options", "accountData", "rooms", "invites", "users"], 1);
     const savedSync: api.Sync = await this.persister.get("options", "sync");
     if (savedSync) {
@@ -354,7 +365,9 @@ export default class Client extends Emitter<ClientEvents> {
         
         room.TEMPlastEventId = data.TEMPlastEventId;
         room.notifications = data.notifications;
+        room.summary = data.summary;
         this.emit("notifications", room, data.notifications);
+        this.emit("summary", room, data.summary);
       }
       for (let [roomId, data] of invites) {
         const invite = new Invite(this, roomId);
