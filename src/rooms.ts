@@ -24,18 +24,14 @@ export default class Rooms extends Map<string, Room> {
   async create(options: RoomCreateOptions): Promise<Room> {
     let done: (room: Room) => void, room_id: string;
     const promise: Promise<Room> = new Promise((res) => done = res);
-    
-    const listen = () => {
-      this.client.once("join", (room) => {
+    const listener = (room: Room) => {
         if (room.id === room_id) {
           done(room);
-        } else {
-          listen();
+          this.client.off("join", listener);
         }
-      });
-    }
-    
-    listen();
+    };
+
+    this.client.on("join", listener);    
     
     ({ room_id } = await this.client.fetcher.createRoom({
       creation_content: options.creationContent,
