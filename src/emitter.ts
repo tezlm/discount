@@ -26,7 +26,7 @@ export default class Emitter<Events extends { [name: string]: (...args: any[]) =
     return this;
 	}
 	
-	protected emit<T extends keyof Events>(event: T, ...params: Parameters<Events[T]>): this {
+	public emit<T extends keyof Events>(event: T, ...params: Parameters<Events[T]>): this {
 		for (let [listener, which] of this.listeners) {
 			if (which === event) listener(...params);
 		}

@@ -198,6 +198,7 @@ export default class Client extends Emitter<ClientEvents> {
                 room.events.live?._add(event);
                 this.emit("event", event);
               }
+              
               // dendrite doesn't send room.state if the state event exists in timeline
               if ((typeof event.stateKey ===  "string") && room.getState(event.type, event.stateKey)?.id !== event.id) {
                 const state = new StateEvent(room, raw as any);

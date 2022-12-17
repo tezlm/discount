@@ -130,7 +130,7 @@ export default class Fetcher {
         limit: limit.toString(),
         
         // it just feels wrong to dump json into the url path
-        filter: '"{"lazy_load_members":true}',
+        filter: '{"lazy_load_members":true}',
       },
     });
   }

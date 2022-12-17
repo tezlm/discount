@@ -44,7 +44,7 @@ export default class Timeline extends Array {
       if (raw.state_key && this.room.getState(raw.type, raw.state_key)?.id !== raw.event_id) {
         this.room.handleState(new StateEvent(this.room, raw as any));
       }
-
+      
       this._add(new Event(this.room, raw), direction === "backwards");
       added++;
     }
@@ -68,6 +68,11 @@ export default class Timeline extends Array {
   // }
 
   _add(event: Event, toBeginning = false) {
+    if (this.find(i => i.id === event.id)) {
+      console.warn("got duplicate event!", event.id);
+      return;
+    }
+
     this.events._handleEvent(event, toBeginning);
     if (event.type === "m.reaction") return;
     if (event.content["m.relates_to"]?.rel_type === "m.replace") return;
