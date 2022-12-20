@@ -5,10 +5,10 @@ class PublicRoom {
   public id: string;
   public type: string;
   
-  public avatar: string;
-  public alias: string;
   public name: string;
   public topic: string;
+  public avatar: string;
+  public alias: string;
   
   public joinRule: string;
   public guestJoinable: boolean;
@@ -18,12 +18,12 @@ class PublicRoom {
   constructor(public client: Client, data: api.PublicRoom) {
     this.id = data.room_id;
     this.type = data.room_type;
-    this.avatar = data.avatar_url;
-    this.alias = data.canonical_alias;
     this.name = data.name;
     this.topic = data.topic;
+    this.avatar = data.avatar_url;
+    this.alias = data.canonical_alias;
     this.joinRule = data.join_rule;
-    this.guestJoinable = data.guest_can_join;
+    this.isGuestJoinable = data.guest_can_join;
     this.isWorldReadable = data.world_readable;
     this.memberCount = data.num_joined_members;
   }

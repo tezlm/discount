@@ -173,7 +173,18 @@ export default class Fetcher {
       return this.fetchClient(`/rooms/${encode(roomId)}/state`, {});
     }
   }
-    
+
+  async fetchHierarchy(roomId: string, options: { from?: string, limit?: string, depth?: number, suggested?: boolean } = {}): Promise<api.Hierarchy> {
+    return this.fetch(`/client/v1/rooms/${encode(roomId)}/hierarchy`, {
+      query: {
+        from: options.from,
+        limit: (options.limit ?? 50).toString(),
+        max_depth: (options.depth ?? 10).toString(),
+        suggested_only: (options.suggested ?? false).toString(),
+      }
+    });
+  }
+  
   // events
   async sendEvent(roomId: string, type: string, content: any, txnId: string): Promise<{ event_id: string }> {
     return this.fetchClient(`/rooms/${encode(roomId)}/send/${encode(type)}/${txnId}`, { method: "PUT", body: content });

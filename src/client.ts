@@ -5,6 +5,7 @@ import type * as api from "./api";
 import Users from "./users";
 import Rooms from "./rooms";
 import Room from "./room";
+import Space from "./space";
 import Invite from "./invite";
 import Timeline from "./timeline";
 import { Event, StateEvent, EphemeralEvent, LocalEvent } from "./event";
@@ -155,7 +156,8 @@ export default class Client extends Emitter<ClientEvents> {
               this.emit("state", state);
             }
           } else {
-            const room = new Room(this, id);
+            const { type } = data.state.events.find(i => i.type === "m.room.create")?.content;
+            const room = type === "m.space" ? new Space(this, id) : new Room(this, id);
             const timeline = new Timeline(room, data.timeline?.prev_batch ?? null, null);
             room.events.live = timeline;
 
@@ -333,7 +335,8 @@ export default class Client extends Emitter<ClientEvents> {
       }
       
       for (let [roomId, data] of rooms) {
-        const room = new Room(this, roomId);
+        const { type } = data.state.find(i => i.type === "m.room.create")?.content;
+        const room = type === "m.space" ? new Space(this, roomId) : new Room(this, roomId);
         for (let raw of data.state) room.handleState(new StateEvent(room, raw), false);
         this.rooms.set(roomId, room);
         this.emit("join", room);

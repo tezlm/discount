@@ -38,6 +38,7 @@ export interface StrippedState {
   content: any,
   sender: string,
   state_key: string,
+  origin_server_ts: number,
   type: string,
 }
 
@@ -171,4 +172,25 @@ export interface PublicRooms {
   next_batch: string,
   prev_batch: string,
   total_room_count_estimate: number,
+}
+
+interface HierarchyRoom {
+  room_id:            string,
+  room_type:          string,
+  
+  name:               string,
+  topic:              string,
+  avatar_url:         string,
+  canonical_alias:    string,
+  
+  children_state:     Array<StrippedState>, // only of type m.space.child
+  guest_can_join:     boolean,
+  world_readable:     boolean,
+  join_rule:          string,
+  num_joined_members: number,
+}
+
+export interface Hierarchy {
+  rooms: Array<HierarchyRoom>,
+  next_batch?: string,
 }

@@ -27,15 +27,14 @@ export default class Relations extends Array<Relation> {
       from: this.nextBatch,
     });
     
-    let count = 0;
     for (let raw of chunk.chunk) {
       const event = new Event(room, raw);
       room.events._handleEvent(event);
-      count++;
     }
     
-    const relations = this.event.relationsOut?.slice(-count) ?? [];
+    const relations = this.event.relationsOut?.slice(-chunk.chunk.length) ?? [];
     for (let rel of relations) this.push(rel);
+    this.nextBatch = chunk.next_batch;
     return relations;
   }
   
