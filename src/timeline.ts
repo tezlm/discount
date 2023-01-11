@@ -14,21 +14,22 @@ export default class Timeline extends Array {
     public room: Room,
     public batchPrev: string | null,
     public batchNext: string | null,
+    _events?: Events,
   ) {
     super();
     this.client = room.client;
-    this.events = room.events;
+    this.events = _events ?? room.events;
   }
   
   private async fetchItems(direction: "backwards" | "forwards"): Promise<number> {
     const limit = this.length < 20 ? 20 : 200;
     let res: api.Messages;
     if (direction === "backwards") {
-      if (!this.batchPrev) return 0;
+      if (this.batchPrev === null) return 0;
       res = await this.client.fetcher.fetchMessages(this.room.id, { from: this.batchPrev, direction: "b", limit });
       this.batchPrev = res.end ?? null;
     } else {
-      if (!this.batchNext) return 0;
+      if (this.batchNext === null) return 0;
       res = await this.client.fetcher.fetchMessages(this.room.id, { from: this.batchNext, direction: "f", limit });
       this.batchNext = res.end ?? null;
     }

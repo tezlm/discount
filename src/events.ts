@@ -27,13 +27,16 @@ function parseRelations(event: Event): Array<{ relType: string, eventId: string,
 
 export default class Events extends Map<string, Event> {
   public client: Client;
-  public live: Timeline | null = null;
+  public room: Room;
+  public live: Timeline;
   public timelines = new Set<Timeline>();
   public _queuedRelations = new Map<string, Array<Relation>>();
   
   constructor(public room: Room) {
     super();
     this.client = room.client;
+    this.room = room;
+    this.live = new Timeline(room, "", null, this);
   }
   
   _handleEvent(event: Event, toBeginning = false) {

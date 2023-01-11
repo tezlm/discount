@@ -268,8 +268,9 @@ export default class Client extends Emitter<ClientEvents> {
     return dirty;
   }
   
-  // TODO: optimize sync - only persist exactly what changed
+  // TODO: optimize sync: only persist exactly what changed
   // private async save(sync: api.Sync, deltas: Array<Room | Invite | accountdata>) {
+  // FIXME: transactional saves: sometimes saved sync can be deleted
   private async save(sync: api.Sync) {
     const roomData = new Map();
     const inviteData = new Map();
