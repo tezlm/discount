@@ -176,7 +176,6 @@ export class Event<RawType extends RawEvent = RawEvent> {
   
   // TEMP: discard compat
   public flags = new Set<string>();
-  get date(): Date { return this.timestamp }
   
   private _reactionsCache: Map<string, Array<Event>> | null = null;
   get reactions() {
