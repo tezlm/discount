@@ -119,12 +119,12 @@ export default class Fetcher {
       query: {
         from: options.from,
         dir: options.direction ?? "b",
-        limit: (options.limit ?? 200).toString(),
+        limit: (options.limit ?? 100).toString(),
       }
     });
   }
 
-  async fetchContext(roomId: string, eventId: string, limit = 200): Promise<api.Context> {
+  async fetchContext(roomId: string, eventId: string, limit = 100): Promise<api.Context> {
     return this.fetchClient(`/rooms/${encode(roomId)}/context/${encode(eventId)}`, {
       query: {
         limit: limit.toString(),

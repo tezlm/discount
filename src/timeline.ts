@@ -22,7 +22,7 @@ export default class Timeline extends Array {
   }
   
   private async fetchItems(direction: "backwards" | "forwards"): Promise<number> {
-    const limit = this.length < 20 ? 20 : 200;
+    const limit = this.length < 20 ? 20 : 100;
     let res: api.Messages;
     if (direction === "backwards") {
       if (this.batchPrev === null) return 0;
@@ -75,7 +75,7 @@ export default class Timeline extends Array {
     }
 
     this.events._handleEvent(event, toBeginning);
-    if (event.type === "m.reaction") return;
+    if (event.type === "m.reaction") return; // TODO: remove
     if (event.content["m.relates_to"]?.rel_type === "m.replace") return;
     this[toBeginning ? "unshift" : "push"](event);
   }
