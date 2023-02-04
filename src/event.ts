@@ -134,10 +134,6 @@ export class Event<RawType extends RawEvent = RawEvent> {
     return false;
   }
   
-  // isLocalEcho(): boolean {
-  //   return this.id[0] === "~";
-  // }
-  
   async redact(reason?: string, txnId = "~" + Math.random().toString(36)) {
     const ev = new LocalEvent(this.room, { type: "m.room.redaction", content: { redacts: this.id }, redacts: this.id }, txnId);
     ev.flags.add("sending");
@@ -150,9 +146,7 @@ export class Event<RawType extends RawEvent = RawEvent> {
   
   async edit(content: any, txnId?: string) {
     if (this.isState()) {
-      throw "Cannot edit state events for now";
-      // would i reuse the stateKey or use txnId?
-      // return this.room.sendState(this.type, content, this.stateKey);
+      return this.room.sendState(this.type, content, this.stateKey);
     }
     
     // @ts-ignore
