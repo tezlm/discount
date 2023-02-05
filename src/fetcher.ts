@@ -256,4 +256,11 @@ export default class Fetcher {
       query: { ...options, limit: (options.limit ?? 50).toString() }
     });
   }
+  
+  async setAccountData(userId: string, key: string, data: any) {
+    return this.fetchClient(`/user/${encode(userId)}/account_data/${encode(key)}`, {
+      method: "PUT",
+      body: data,
+    });
+  }
 }

@@ -2,6 +2,7 @@ import Emitter from "./emitter";
 import Fetcher from "./fetcher";
 import type * as api from "./api";
 
+import AccountData from "./account-data";
 import Users from "./users";
 import Rooms from "./rooms";
 import Room from "./room";
@@ -77,7 +78,7 @@ export default class Client extends Emitter<ClientEvents> {
   public users = new Users(this);
   public rooms = new Rooms(this);
   public invites = new Map<string, Invite>();
-  public accountData = new Map<string, any>();
+  public accountData = new AccountData(this);
   public _transactions = new Map<string, LocalEvent>();
   private abort = new AbortController();
   private persister: Database<StatePersist> = new MemoryDB();
