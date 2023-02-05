@@ -28,15 +28,15 @@ function useLessMemory(raw: RawEvent) {
     const content = raw.content;
     content.displayname && (content.displayname = intern(content.displayname));
     content.avatar_url && (content.avatar_url = intern(content.avatar_url));
-    content.membership && (content.membership = intern(content.membership ));
+    content.membership && (content.membership = intern(content.membership));
   }
 }
 
-export class Event<RawType extends RawEvent = RawEvent> {  
+export class Event<RawType extends RawEvent = RawEvent> {
   public client: Client;
   public raw: RawType;
   public relationsIn:  Array<Relation> | null = null; // events pointing to me
-  public relationsOut: Array<Relation> | null = null; // events i pont to
+  public relationsOut: Array<Relation> | null = null; // events i point to
   private _contentCache: any = null;
   
   public id: string;

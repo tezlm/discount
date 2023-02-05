@@ -21,7 +21,7 @@ export default class Member {
     this.client = room.client;
     this.room = room;
     this.event = event;
-    this.id = intern(event.stateKey);
+    this.id = event.stateKey;
     this.name = event.content.displayname;
     this.avatar = event.content.avatar_url;
   }
@@ -34,11 +34,11 @@ export default class Member {
     return this.room.power.forUser(this.id);
   }
   
-  async setPower(power: number) {
+  async setPower(power?: number) {
     return this.room.power.patch({ users: { [this.id]: power }});
   }
   
-  async ban(reason: string) {
+  async ban(reason?: string) {
     this.client.fetcher.banMember(this.room.id, this.id, reason);
   }
   
@@ -46,7 +46,7 @@ export default class Member {
     this.client.fetcher.kickMember(this.room.id, this.id, reason);
   }
   
-  async unban(reason: string) {
+  async unban(reason?: string) {
     this.client.fetcher.unbanMember(this.room.id, this.id, reason);
   }
   
