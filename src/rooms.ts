@@ -1,5 +1,5 @@
-import type Client from "./client";
-import type Room from "./room";
+import type Client from "./client.ts";
+import type Room from "./room.ts";
 
 interface RoomCreateOptions {
   creationContent?: { [key: string]: any },

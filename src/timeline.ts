@@ -1,8 +1,8 @@
-import type Room from "./room";
-import type Client from "./client";
-import type Events from "./events";
-import type * as api from "./api";
-import { Event, StateEvent } from "./event";
+import type Room from "./room.ts";
+import type Client from "./client.ts";
+import type Events from "./events.ts";
+import type * as api from "./api.ts";
+import { Event, StateEvent } from "./event.ts";
 
 export default class Timeline extends Array {
   public client: Client;

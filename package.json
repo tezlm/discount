@@ -1,16 +1,10 @@
 {
   "name": "discount.ts",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "description": "another matrix library",
   "author": "tezlm",
   "type": "module",
   "main": "src/index.ts",
-  "types": "build/src/index.d.ts",
-  "scripts": {
-    "build": "tsc",
-    "clean": "rm build -rf",
-    "test": "echo tests are disabled for now && exit 1 && tsc && node ./build/test/index.js"
-  },
   "keywords": [
     "matrix"
   ],
@@ -24,7 +18,6 @@
     "@types/node": "^18.11.9",
     "better-sqlite3": "^7.6.2",
     "bun-types": "^0.2.2",
-    "idb": "^7.1.1",
-    "typescript": "^4.8.4"
+    "idb": "^7.1.1"
   }
 }

@@ -1,5 +1,5 @@
-import type Client from "./client";
-import { UserData } from "./api";
+import type Client from "./client.ts";
+import { UserData } from "./api.ts";
 
 export default class User {
   public name: string;

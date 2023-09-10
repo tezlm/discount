@@ -1,8 +1,8 @@
-import type Client from "./client";
-import type Room from "./room";
-import type { StateEvent } from "./event";
-// import User from "./user";
-import { intern } from "./util";
+import type Client from "./client.ts";
+import type Room from "./room.ts";
+import type { StateEvent } from "./event.ts";
+// import User from "./user.ts";
+import { intern } from "./util.ts";
 
 export type Membership = "join" | "knock" | "invite" | "leave" | "ban";
 

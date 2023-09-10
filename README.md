@@ -2,9 +2,15 @@
 
 A new in-development matrix library because I dont like matrix-js-sdk.
 
-For now, discount is unstable and being developed alongside discard.
+Don't use this library. It's mostly for personal use, and isn't very
+good. I really don't recommend using it. For example:
 
-> Warning: Discount is under **heavy** development and things will change!
+- node support isn't planned - only deno, bun, and runtimes that can
+natively use typescript will work.
+- e2ee does not exist
+- i only really use this for quick bots and testing
+- features are missing, like media upload/download and typing
+- this is *archived and unmaintained*.
 
 ## Example
 

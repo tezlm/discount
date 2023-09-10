@@ -1,5 +1,5 @@
-import { Event, Relation } from "./event"
-import type * as api from "./api";
+import { Event, Relation } from "./event.ts"
+import type * as api from "./api.ts";
 
 export default class Relations extends Array<Relation> {
   private nextBatch: string;

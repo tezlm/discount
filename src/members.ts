@@ -1,7 +1,7 @@
-import type Client from "./client";
-import type Room from "./room";
-import { StateEvent } from "./event";
-import Member, { Membership } from "./member";
+import type Client from "./client.ts";
+import type Room from "./room.ts";
+import { StateEvent } from "./event.ts";
+import Member, { Membership } from "./member.ts";
 
 export default class Members extends Map<string, Member> {
   private requests = new Map<string, Promise<any>>;

@@ -1,7 +1,7 @@
-import type Client from "./client";
-import type Room from "./room";
-import { Event, StateEvent, Relation } from "./event";
-import Timeline from "./timeline";
+import type Client from "./client.ts";
+import type Room from "./room.ts";
+import { Event, StateEvent, Relation } from "./event.ts";
+import Timeline from "./timeline.ts";
 
 function parseRelations(event: Event): Array<{ relType: string, eventId: string, key?: string, fallback: boolean }> {
   const cont = event.content["m.relates_to"];

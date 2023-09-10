@@ -1,9 +1,9 @@
-import type Room from "./room";
-import type Member from "./member";
-import type Client from "./client";
-import type { RawEvent, RawStateEvent, RawEphemeralEvent } from "./api";
-import Relations from "./relations";
-import { intern } from "./util";
+import type Room from "./room.ts";
+import type Member from "./member.ts";
+import type Client from "./client.ts";
+import type { RawEvent, RawStateEvent, RawEphemeralEvent } from "./api.ts";
+import Relations from "./relations.ts";
+import { intern } from "./util.ts";
 
 export interface RawLocalEvent {
   type: string,

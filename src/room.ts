@@ -1,9 +1,9 @@
-import type Client from "./client";
-import { StateEvent, LocalEvent } from "./event";
-// import Emitter from "./emitter";
-import Members from "./members";
-import Events from "./events";
-import Power from "./power";
+import type Client from "./client.ts";
+import { StateEvent, LocalEvent } from "./event.ts";
+// import Emitter from "./emitter.ts";
+import Members from "./members.ts";
+import Events from "./events.ts";
+import Power from "./power.ts";
 
 type JoinRule = "invite" | "public" | "knock" | "restricted" | "knock_restricted";
 

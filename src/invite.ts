@@ -1,5 +1,5 @@
-import type Client from "./client";
-import type * as api from "./api";
+import type Client from "./client.ts";
+import type * as api from "./api.ts";
 
 export default class Invite {
   public state: Array<api.StrippedState> = [];

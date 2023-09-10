@@ -1,17 +1,17 @@
-import Emitter from "./emitter";
-import Fetcher from "./fetcher";
-import type * as api from "./api";
+import Emitter from "./emitter.ts";
+import Fetcher from "./fetcher.ts";
+import type * as api from "./api.ts";
 
-import AccountData from "./account-data";
-import Users from "./users";
-import Rooms from "./rooms";
-import Room from "./room";
-import Space from "./space";
-import Invite from "./invite";
-import Timeline from "./timeline";
-import { Event, StateEvent, EphemeralEvent, LocalEvent } from "./event";
+import AccountData from "./account-data.ts";
+import Users from "./users.ts";
+import Rooms from "./rooms.ts";
+import Room from "./room.ts";
+import Space from "./space.ts";
+import Invite from "./invite.ts";
+import Timeline from "./timeline.ts";
+import { Event, StateEvent, EphemeralEvent, LocalEvent } from "./event.ts";
 
-import Database, { MemoryDB } from "./persist";
+import Database, { MemoryDB } from "./persist.ts";
 
 interface StatePersist {
   options: any,
@@ -291,7 +291,8 @@ export default class Client extends Emitter<ClientEvents> {
         state: invite.state,
       });
     }
-    
+
+    // this is awful and doesn't use transactions
     await Promise.all([
       this.persister.deleteAll("accountData"),
       this.persister.deleteAll("rooms"),

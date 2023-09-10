@@ -1,5 +1,5 @@
-import Room from "./room";
-import * as api from "./api";
+import Room from "./room.ts";
+import * as api from "./api.ts";
 
 class HierarchyRoom {
   id:              string;

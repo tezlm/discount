@@ -1,4 +1,4 @@
-import type * as api from "./api.js"
+import type * as api from "./api.ts"
 
 interface FetchOptions {
   method?: string,

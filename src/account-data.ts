@@ -1,4 +1,4 @@
-import type Client from "./client";
+import type Client from "./client.ts";
 
 export default class AccountData extends Map<string, any> {
   constructor(public client: Client) {

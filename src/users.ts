@@ -1,5 +1,5 @@
-import type Client from "./client";
-import User from "./user";
+import type Client from "./client.ts";
+import User from "./user.ts";
 
 export default class Users extends Map<string, User | null> {
   constructor(
